@@ -12,27 +12,57 @@
   ],
   "routes": [
     {
+      "src": "/css/ios-style.css",
+      "dest": "/public/css/ios-style.css",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "pragma": "no-cache",
+        "expires": "0",
+        "content-type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "src": "/css/auth.css",
+      "dest": "/public/css/auth.css",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "pragma": "no-cache",
+        "expires": "0",
+        "content-type": "text/css; charset=utf-8"
+      }
+    },
+    {
       "src": "/css/(.*)",
       "dest": "/public/css/$1",
       "headers": {
-        "cache-control": "public, max-age=0, must-revalidate",
-        "content-type": "text/css"
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "pragma": "no-cache",
+        "expires": "0",
+        "content-type": "text/css; charset=utf-8"
       }
     },
     {
       "src": "/js/(.*)",
       "dest": "/public/js/$1",
       "headers": {
-        "cache-control": "public, max-age=0, must-revalidate",
-        "content-type": "application/javascript"
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "pragma": "no-cache",
+        "expires": "0",
+        "content-type": "application/javascript; charset=utf-8"
       }
     },
     {
       "src": "/img/(.*)",
       "dest": "/public/img/$1",
       "headers": {
-        "cache-control": "public, max-age=0, must-revalidate"
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "pragma": "no-cache",
+        "expires": "0"
       }
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/public/favicon.ico"
     },
     {
       "handle": "filesystem"

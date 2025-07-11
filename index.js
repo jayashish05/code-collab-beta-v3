@@ -39,6 +39,14 @@ app.get("/api/health", (req, res) => {
       js: path.join(__dirname, "public/js"),
       img: path.join(__dirname, "public/img"),
     },
+    cssStatus: {
+      iosStyleExists: fs.existsSync(
+        path.join(__dirname, "public/css/ios-style.css"),
+      ),
+      authCssExists: fs.existsSync(path.join(__dirname, "public/css/auth.css")),
+      publicDirExists: fs.existsSync(path.join(__dirname, "public")),
+      publicCssDirExists: fs.existsSync(path.join(__dirname, "public/css")),
+    },
   });
 });
 
@@ -246,12 +254,44 @@ app.use((req, res, next) => {
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// Serve static files
-app.use(express.static(path.join(__dirname, "public"), { maxAge: 0 }));
-app.use(
-  "/css",
-  express.static(path.join(__dirname, "public/css"), { maxAge: 0 }),
+// Serve static files - with additional debugging for Vercel
+console.log("Setting up static file serving. __dirname:", __dirname);
+console.log(
+  "Public path exists:",
+  fs.existsSync(path.join(__dirname, "public")),
 );
+console.log(
+  "CSS path exists:",
+  fs.existsSync(path.join(__dirname, "public/css")),
+);
+
+// Serve static files with explicit content types for Vercel
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    maxAge: 0,
+    setHeaders: (res, path) => {
+      console.log("Serving static file:", path);
+      if (path.endsWith(".css")) {
+        res.setHeader("Content-Type", "text/css");
+      } else if (path.endsWith(".js")) {
+        res.setHeader("Content-Type", "application/javascript");
+      }
+    },
+  }),
+);
+
+// Explicit routes for CSS files with correct content type
+app.use("/css", (req, res, next) => {
+  console.log("CSS request received for:", req.path);
+  express.static(path.join(__dirname, "public/css"), {
+    maxAge: 0,
+    setHeaders: (res) => {
+      res.setHeader("Content-Type", "text/css");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    },
+  })(req, res, next);
+});
+
 app.use(
   "/img",
   express.static(path.join(__dirname, "public/img"), { maxAge: 0 }),
@@ -260,6 +300,27 @@ app.use(
   "/js",
   express.static(path.join(__dirname, "public/js"), { maxAge: 0 }),
 );
+
+// Direct route for specific CSS files
+app.get("/css/ios-style.css", (req, res) => {
+  const cssPath = path.join(__dirname, "public/css/ios-style.css");
+  console.log(
+    "Direct CSS request for ios-style.css, file exists:",
+    fs.existsSync(cssPath),
+  );
+  res.setHeader("Content-Type", "text/css");
+  res.sendFile(cssPath);
+});
+
+app.get("/css/auth.css", (req, res) => {
+  const cssPath = path.join(__dirname, "public/css/auth.css");
+  console.log(
+    "Direct CSS request for auth.css, file exists:",
+    fs.existsSync(cssPath),
+  );
+  res.setHeader("Content-Type", "text/css");
+  res.sendFile(cssPath);
+});
 
 // Log static file serving details for debugging in Vercel
 app.use((req, res, next) => {
@@ -301,7 +362,8 @@ app.get("/", (req, res) => {
   if (req.user) {
     res.redirect("/dashboard");
   } else {
-    res.render("home.ejs", { title: "Home" });
+    // Use the inline version of home page with CSS embedded to avoid Vercel CSS loading issues
+    res.render("inline-home.ejs", { title: "Home" });
   }
 });
 
