@@ -24,6 +24,8 @@ const app = express();
 const port = process.env.PORT || 3002;
 const httpServer = createServer(app);
 
+app.use(express.static("public"));
+
 // Add health check endpoint for Vercel
 app.get("/api/health", (req, res) => {
   res.status(200).json({
