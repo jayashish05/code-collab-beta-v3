@@ -24,11 +24,6 @@ const app = express();
 const port = process.env.PORT || 3002;
 const httpServer = createServer(app);
 
-// Trust proxy for Vercel environment
-app.set("trust proxy", 1);
-
-app.use(express.static("public"));
-
 // Add health check endpoint for Vercel
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -41,14 +36,6 @@ app.get("/api/health", (req, res) => {
       css: path.join(__dirname, "public/css"),
       js: path.join(__dirname, "public/js"),
       img: path.join(__dirname, "public/img"),
-    },
-    cssStatus: {
-      iosStyleExists: fs.existsSync(
-        path.join(__dirname, "public/css/ios-style.css"),
-      ),
-      authCssExists: fs.existsSync(path.join(__dirname, "public/css/auth.css")),
-      publicDirExists: fs.existsSync(path.join(__dirname, "public")),
-      publicCssDirExists: fs.existsSync(path.join(__dirname, "public/css")),
     },
   });
 });
@@ -95,28 +82,8 @@ app.use(
     },
     // Memory store is fine for Vercel serverless functions
     // For production, consider using a database or Redis store
-    proxy: true, // Trust proxy - needed for secure cookies in Vercel
-
-    // Save uninitiated sessions to fix issues with Vercel
-    saveUninitialized: true,
   }),
 );
-
-// Log session events for debugging
-app.use((req, res, next) => {
-  const originalEnd = res.end;
-  res.end = function () {
-    if (req.session) {
-      console.log(`Session at end of request: ${req.url}`, {
-        id: req.sessionID,
-        authenticated: req.isAuthenticated(),
-        user: req.user ? req.user.id : null,
-      });
-    }
-    originalEnd.apply(res, arguments);
-  };
-  next();
-});
 
 // Initialize passport
 app.use(passport.initialize());
@@ -208,26 +175,15 @@ passport.use(
   "google",
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID || process.env.CLIENT_ID,
+      clientID: process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
       clientSecret:
-        process.env.GOOGLE_CLIENT_SECRET || process.env.CLIENT_GOOGLE_SECRET,
+        process.env.CLIENT_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET,
       callbackURL:
-        process.env.GOOGLE_CALLBACK_URL ||
         process.env.CALLBACK_URL ||
-        (process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}/auth/google/callback`
-          : "http://localhost:3002/auth/google/callback"),
+        "https://code-collab-beta-v1.vercel.app/auth/google/callback",
       userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
-      passReqToCallback: true,
-      proxy: true,
     },
-    async (req, accessToken, refreshToken, profile, done) => {
-      // Log profile information for debugging
-      console.log(
-        "Google Auth Strategy - Profile:",
-        JSON.stringify(profile, null, 2),
-      );
-      console.log("Google Auth Strategy - Session before:", req.session);
+    async (accessToken, refreshToken, profile, cb) => {
       try {
         console.log("Google profile:", profile);
         console.log("Looking up Google user with ID:", profile.id);
@@ -288,44 +244,12 @@ app.use((req, res, next) => {
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// Serve static files - with additional debugging for Vercel
-console.log("Setting up static file serving. __dirname:", __dirname);
-console.log(
-  "Public path exists:",
-  fs.existsSync(path.join(__dirname, "public")),
-);
-console.log(
-  "CSS path exists:",
-  fs.existsSync(path.join(__dirname, "public/css")),
-);
-
-// Serve static files with explicit content types for Vercel
+// Serve static files
+app.use(express.static(path.join(__dirname, "public"), { maxAge: 0 }));
 app.use(
-  express.static(path.join(__dirname, "public"), {
-    maxAge: 0,
-    setHeaders: (res, path) => {
-      console.log("Serving static file:", path);
-      if (path.endsWith(".css")) {
-        res.setHeader("Content-Type", "text/css");
-      } else if (path.endsWith(".js")) {
-        res.setHeader("Content-Type", "application/javascript");
-      }
-    },
-  }),
+  "/css",
+  express.static(path.join(__dirname, "public/css"), { maxAge: 0 }),
 );
-
-// Explicit routes for CSS files with correct content type
-app.use("/css", (req, res, next) => {
-  console.log("CSS request received for:", req.path);
-  express.static(path.join(__dirname, "public/css"), {
-    maxAge: 0,
-    setHeaders: (res) => {
-      res.setHeader("Content-Type", "text/css");
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    },
-  })(req, res, next);
-});
-
 app.use(
   "/img",
   express.static(path.join(__dirname, "public/img"), { maxAge: 0 }),
@@ -334,27 +258,6 @@ app.use(
   "/js",
   express.static(path.join(__dirname, "public/js"), { maxAge: 0 }),
 );
-
-// Direct route for specific CSS files
-app.get("/css/ios-style.css", (req, res) => {
-  const cssPath = path.join(__dirname, "public/css/ios-style.css");
-  console.log(
-    "Direct CSS request for ios-style.css, file exists:",
-    fs.existsSync(cssPath),
-  );
-  res.setHeader("Content-Type", "text/css");
-  res.sendFile(cssPath);
-});
-
-app.get("/css/auth.css", (req, res) => {
-  const cssPath = path.join(__dirname, "public/css/auth.css");
-  console.log(
-    "Direct CSS request for auth.css, file exists:",
-    fs.existsSync(cssPath),
-  );
-  res.setHeader("Content-Type", "text/css");
-  res.sendFile(cssPath);
-});
 
 // Log static file serving details for debugging in Vercel
 app.use((req, res, next) => {
@@ -379,8 +282,7 @@ app.get("/", (req, res) => {
   if (req.user) {
     res.redirect("/dashboard");
   } else {
-    // Use the inline version of home page with CSS embedded to avoid Vercel CSS loading issues
-    res.render("inline-home.ejs", { title: "Home" });
+    res.render("home.ejs", { title: "Home" });
   }
 });
 
@@ -391,7 +293,7 @@ app.get("/dashboard", (req, res) => {
 
   // Check if user is in session
   if (req.user) {
-    res.render("inline-dashboard.ejs", {
+    res.render("dashboard.ejs", {
       title: "Dashboard",
     });
   } else {
@@ -559,141 +461,35 @@ app.get("/room/:roomId", (req, res) => {
 });
 
 app.get("/auth/signin", (req, res) => {
-  res.render("inline-signin.ejs", { title: "Sign In" });
+  res.render("signin.ejs", { title: "Sign In" });
 });
 
 app.get("/auth/signup", (req, res) => {
-  res.render("inline-signup.ejs", { title: "Sign Up" });
+  res.render("signup.ejs", { title: "Sign Up" });
 });
 
 app.get("/auth/forgot-password", (req, res) => {
-  res.render("inline-forgot-password.ejs", { title: "Forgot Password" });
-});
-
-// Add health check endpoint to debug authentication issues
-app.get("/auth/debug", (req, res) => {
-  // Log session information for debugging
-  console.log("DEBUG SESSION:", {
-    sessionID: req.sessionID,
-    session: req.session,
-    user: req.user,
-  });
-
-  res.json({
-    env: process.env.NODE_ENV,
-    vercelUrl: process.env.VERCEL_URL,
-    baseUrl: req.protocol + "://" + req.get("host"),
-    user: req.user
-      ? {
-          id: req.user.id,
-          email: req.user.email,
-          name: req.user.name,
-          provider: req.user.provider,
-        }
-      : null,
-    session: req.session
-      ? {
-          id: req.session.id,
-          cookie: req.session.cookie,
-          authType: req.session.authType,
-          returnTo: req.session.returnTo,
-          isAuthenticated: req.isAuthenticated(),
-        }
-      : null,
-    headers: {
-      host: req.get("host"),
-      referer: req.get("referer"),
-      "user-agent": req.get("user-agent"),
-      "x-forwarded-for": req.get("x-forwarded-for"),
-      "x-forwarded-proto": req.get("x-forwarded-proto"),
-      "x-vercel-deployment-url": req.get("x-vercel-deployment-url"),
-      "x-vercel-id": req.get("x-vercel-id"),
-    },
-    callbackUrl:
-      process.env.GOOGLE_CALLBACK_URL ||
-      process.env.CALLBACK_URL ||
-      (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}/auth/google/callback`
-        : "http://localhost:3002/auth/google/callback"),
-    oauthConfig: {
-      clientID: process.env.GOOGLE_CLIENT_ID ? "Set" : "Not set",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not set",
-      callbackURL: process.env.GOOGLE_CALLBACK_URL ? "Set" : "Not set",
-    },
-  });
+  res.render("forgot-password.ejs", { title: "Forgot Password" });
 });
 
 // Google OAuth routes
 app.get(
   "/auth/google",
-  (req, res, next) => {
-    // Store original URL in the session for redirection after authentication
-    req.session.returnTo = req.query.returnTo || "/dashboard";
-    console.log(
-      "Google Auth - Starting authentication flow, returnTo:",
-      req.session.returnTo,
-    );
-    console.log("Google Auth - Current host:", req.get("host"));
-    console.log("Google Auth - Protocol:", req.protocol);
-    next();
-  },
   passport.authenticate("google", {
     scope: ["profile", "email"],
-    prompt: "select_account",
   }),
 );
 
 app.get(
   "/auth/google/callback",
-  (req, res, next) => {
-    console.log(
-      "Google Auth Callback - Received callback with query:",
-      req.query,
-    );
-    if (req.query.error) {
-      console.error("Google Auth Callback - OAuth error:", req.query.error);
-      return res.redirect(
-        "/auth/signin?error=" +
-          encodeURIComponent("Google authentication failed"),
-      );
-    }
-    next();
-  },
-  passport.authenticate("google", {
-    failureRedirect: "/auth/signin?error=Authentication+failed",
-    failWithError: true,
-  }),
+  passport.authenticate("google", { failureRedirect: "/auth/signin" }),
   function (req, res) {
     console.log("Google auth successful, redirecting to dashboard");
     console.log("User authenticated:", req.user);
     console.log("Session after Google auth:", req.session);
-    console.log("IsAuthenticated:", req.isAuthenticated());
-
     // Store auth type in session for debugging
     req.session.authType = "google";
-
-    // Ensure session is saved before redirecting
-    req.session.save((err) => {
-      if (err) {
-        console.error("Error saving session:", err);
-      }
-
-      // Redirect to the original URL or default to dashboard
-      const redirectUrl = req.session.returnTo || "/dashboard";
-      delete req.session.returnTo;
-
-      console.log("Redirecting to:", redirectUrl);
-      res.redirect(redirectUrl);
-    });
-  },
-  function (err, req, res, next) {
-    console.error("Google Auth Error:", err);
-    res.redirect(
-      "/auth/signin?error=" +
-        encodeURIComponent(
-          "Authentication failed: " + (err.message || "Unknown error"),
-        ),
-    );
+    res.redirect("/dashboard");
   },
 );
 
