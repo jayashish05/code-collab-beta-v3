@@ -26,7 +26,18 @@ const httpServer = createServer(app);
 
 // Add health check endpoint for Vercel
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  res.status(200).json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || "development",
+    dirname: __dirname,
+    staticPaths: {
+      public: path.join(__dirname, "public"),
+      css: path.join(__dirname, "public/css"),
+      js: path.join(__dirname, "public/js"),
+      img: path.join(__dirname, "public/img"),
+    },
+  });
 });
 
 // Add request logging middleware for debugging
@@ -42,7 +53,7 @@ app.use((err, req, res, next) => {
 });
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NODE_ENV === "production" ? [/\.vercel\.app$/] : "*",
+    origin: "*", // Allow all origins to ensure it works on Vercel
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -164,9 +175,12 @@ passport.use(
   "google",
   new GoogleStrategy(
     {
-      clientID: process.env.CLIENT_ID,
-      clientSecret: process.env.CLIENT_GOOGLE_SECRET,
-      callbackURL: "http://localhost:3002/auth/google/callback",
+      clientID: process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
+      clientSecret:
+        process.env.CLIENT_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL:
+        process.env.CALLBACK_URL ||
+        "https://code-collab-beta-v1.vercel.app/auth/google/callback",
       userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
     },
     async (accessToken, refreshToken, profile, cb) => {
@@ -231,6 +245,7 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 // Serve static files
+app.use(express.static(path.join(__dirname, "public"), { maxAge: 0 }));
 app.use(
   "/css",
   express.static(path.join(__dirname, "public/css"), { maxAge: 0 }),
@@ -239,7 +254,24 @@ app.use(
   "/img",
   express.static(path.join(__dirname, "public/img"), { maxAge: 0 }),
 );
-app.use(express.static(path.join(__dirname, "public"), { maxAge: 0 }));
+app.use(
+  "/js",
+  express.static(path.join(__dirname, "public/js"), { maxAge: 0 }),
+);
+
+// Log static file serving details for debugging in Vercel
+app.use((req, res, next) => {
+  if (
+    req.url.startsWith("/css") ||
+    req.url.startsWith("/js") ||
+    req.url.startsWith("/img")
+  ) {
+    console.log(
+      `[STATIC] Serving: ${req.url}, Full path: ${path.join(__dirname, "public", req.url)}`,
+    );
+  }
+  next();
+});
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json()); // For JSON requests
 
@@ -741,6 +773,14 @@ if (!process.env.SESSION_SECRET) {
 // Log static file paths for debugging in Vercel
 console.log("Static files path:", path.join(__dirname, "public"));
 console.log("CSS files path:", path.join(__dirname, "public/css"));
+
+// Log specific CSS file path for verification
+if (fs.existsSync(path.join(__dirname, "public/css/ios-style.css"))) {
+  console.log("CSS file ios-style.css exists and is accessible");
+  console.log("Full path:", path.join(__dirname, "public/css/ios-style.css"));
+  const stats = fs.statSync(path.join(__dirname, "public/css/ios-style.css"));
+  console.log("File size:", stats.size, "bytes");
+}
 console.log(
   "CSS file exists:",
   fs.existsSync(path.join(__dirname, "public/css/ios-style.css")),
