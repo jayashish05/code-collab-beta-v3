@@ -96,8 +96,27 @@ app.use(
     // Memory store is fine for Vercel serverless functions
     // For production, consider using a database or Redis store
     proxy: true, // Trust proxy - needed for secure cookies in Vercel
+
+    // Save uninitiated sessions to fix issues with Vercel
+    saveUninitialized: true,
   }),
 );
+
+// Log session events for debugging
+app.use((req, res, next) => {
+  const originalEnd = res.end;
+  res.end = function () {
+    if (req.session) {
+      console.log(`Session at end of request: ${req.url}`, {
+        id: req.sessionID,
+        authenticated: req.isAuthenticated(),
+        user: req.user ? req.user.id : null,
+      });
+    }
+    originalEnd.apply(res, arguments);
+  };
+  next();
+});
 
 // Initialize passport
 app.use(passport.initialize());
@@ -203,6 +222,12 @@ passport.use(
       proxy: true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
+      // Log profile information for debugging
+      console.log(
+        "Google Auth Strategy - Profile:",
+        JSON.stringify(profile, null, 2),
+      );
+      console.log("Google Auth Strategy - Session before:", req.session);
       try {
         console.log("Google profile:", profile);
         console.log("Looking up Google user with ID:", profile.id);
@@ -383,7 +408,7 @@ app.get("/dashboard", (req, res) => {
 
   // Check if user is in session
   if (req.user) {
-    res.render("dashboard.ejs", {
+    res.render("inline-dashboard.ejs", {
       title: "Dashboard",
     });
   } else {
@@ -564,18 +589,42 @@ app.get("/auth/forgot-password", (req, res) => {
 
 // Add health check endpoint to debug authentication issues
 app.get("/auth/debug", (req, res) => {
+  // Log session information for debugging
+  console.log("DEBUG SESSION:", {
+    sessionID: req.sessionID,
+    session: req.session,
+    user: req.user,
+  });
+
   res.json({
     env: process.env.NODE_ENV,
     vercelUrl: process.env.VERCEL_URL,
     baseUrl: req.protocol + "://" + req.get("host"),
-    user: req.user ? { id: req.user.id, email: req.user.email } : null,
-    session: req.session ? { id: req.session.id } : null,
+    user: req.user
+      ? {
+          id: req.user.id,
+          email: req.user.email,
+          name: req.user.name,
+          provider: req.user.provider,
+        }
+      : null,
+    session: req.session
+      ? {
+          id: req.session.id,
+          cookie: req.session.cookie,
+          authType: req.session.authType,
+          returnTo: req.session.returnTo,
+          isAuthenticated: req.isAuthenticated(),
+        }
+      : null,
     headers: {
       host: req.get("host"),
       referer: req.get("referer"),
       "user-agent": req.get("user-agent"),
       "x-forwarded-for": req.get("x-forwarded-for"),
       "x-forwarded-proto": req.get("x-forwarded-proto"),
+      "x-vercel-deployment-url": req.get("x-vercel-deployment-url"),
+      "x-vercel-id": req.get("x-vercel-id"),
     },
     callbackUrl:
       process.env.GOOGLE_CALLBACK_URL ||
@@ -583,6 +632,11 @@ app.get("/auth/debug", (req, res) => {
       (process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}/auth/google/callback`
         : "http://localhost:3002/auth/google/callback"),
+    oauthConfig: {
+      clientID: process.env.GOOGLE_CLIENT_ID ? "Set" : "Not set",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ? "Set" : "Not set",
+      callbackURL: process.env.GOOGLE_CALLBACK_URL ? "Set" : "Not set",
+    },
   });
 });
 
@@ -630,12 +684,24 @@ app.get(
     console.log("Google auth successful, redirecting to dashboard");
     console.log("User authenticated:", req.user);
     console.log("Session after Google auth:", req.session);
+    console.log("IsAuthenticated:", req.isAuthenticated());
+
     // Store auth type in session for debugging
     req.session.authType = "google";
-    // Redirect to the original URL or default to dashboard
-    const redirectUrl = req.session.returnTo || "/dashboard";
-    delete req.session.returnTo;
-    res.redirect(redirectUrl);
+
+    // Ensure session is saved before redirecting
+    req.session.save((err) => {
+      if (err) {
+        console.error("Error saving session:", err);
+      }
+
+      // Redirect to the original URL or default to dashboard
+      const redirectUrl = req.session.returnTo || "/dashboard";
+      delete req.session.returnTo;
+
+      console.log("Redirecting to:", redirectUrl);
+      res.redirect(redirectUrl);
+    });
   },
   function (err, req, res, next) {
     console.error("Google Auth Error:", err);

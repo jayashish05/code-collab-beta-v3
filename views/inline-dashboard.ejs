@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | CodeCollab</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.24/build/spline-viewer.js"></script>
+
+  <!-- Inline CSS instead of external stylesheet -->
+  <style>
+    :root {
+      --ios-primary: #007aff;
+      --ios-primary-dark: #0056b3;
+      --ios-primary-light: #47a3ff;
+      --ios-secondary: #5ac8fa;
+      --ios-success: #4cd964;
+      --ios-warning: #ff9500;
+      --ios-danger: #ff3b30;
+      --ios-gray-1: #8e8e93;
+      --ios-gray-2: #aeaeb2;
+      --ios-gray-3: #c7c7cc;
+      --ios-gray-4: #d1d1d6;
+      --ios-gray-5: #e5e5ea;
+      --ios-gray-6: #f2f2f7;
+      --ios-text: #000000;
+      --ios-text-secondary: #3c3c43;
+      --ios-background: rgba(255, 255, 255, 0.85);
+      --ios-card-bg: rgba(255, 255, 255, 0.85);
+      --ios-shadow: rgba(0, 0, 0, 0.15);
+      --ios-backdrop-blur: 10px;
+      --ios-border-radius: 12px;
+      --ios-transition: 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      --ios-dark-background: rgba(28, 28, 30, 0.85);
+      --ios-dark-card-bg: rgba(44, 44, 46, 0.9);
+      --ios-dark-text: #ffffff;
+      --ios-dark-text-secondary: rgba(255, 255, 255, 0.8);
+      --ios-dark-shadow: rgba(0, 0, 0, 0.35);
+    }
+
+    body {
+      background-color: #0f172a;
+      overflow-x: hidden;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    .dashboard-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navbar styles */
+    .top-navbar {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: white;
+      text-decoration: none;
+    }
+
+    .navbar-nav .nav-link {
+      color: rgba(255, 255, 255, 0.8);
+      transition: color 0.3s;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+    }
+
+    .navbar-nav .nav-link:hover {
+      color: white;
+    }
+
+    .navbar-nav .nav-link.active {
+      color: var(--ios-primary);
+    }
+
+    /* Main content area */
+    .content-area {
+      flex: 1;
+      display: flex;
+      padding: 1.5rem;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background-color: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 70px);
+      position: sticky;
+      top: 70px;
+    }
+
+    .sidebar-heading {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--ios-gray-1);
+      margin-bottom: 1rem;
+      letter-spacing: 0.05em;
+    }
+
+    .room-list {
+      margin-bottom: 2rem;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .room-item {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      background-color: rgba(30, 41, 59, 0.7);
+      transition: all 0.2s;
+    }
+
+    .room-item:hover {
+      background-color: rgba(30, 41, 59, 0.9);
+      transform: translateY(-2px);
+    }
+
+    .room-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background-color: rgba(90, 200, 250, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.75rem;
+      color: var(--ios-primary);
+      font-size: 1.2rem;
+    }
+
+    .room-info {
+      flex: 1;
+    }
+
+    .room-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      color: white;
+    }
+
+    .room-details {
+      font-size: 0.8rem;
+      color: var(--ios-gray-2);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 0 1.5rem;
+    }
+
+    .page-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: white;
+    }
+
+    /* Cards */
+    .dashboard-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .dashboard-card {
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.3s;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      background: rgba(30, 41, 59, 0.8);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background-color: rgba(0, 122, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      color: var(--ios-primary);
+      font-size: 1.5rem;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+
+    .card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-trend {
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .trend-up {
+      color: var(--ios-success);
+    }
+
+    .trend-down {
+      color: var(--ios-danger);
+    }
+
+    /* Recent Activity */
+    .activity-section {
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: white;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 1rem;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .activity-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-text {
+      margin-bottom: 0.25rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .activity-time {
+      font-size: 0.8rem;
+      color: var(--ios-gray-2);
+    }
+
+    /* Create Room Button */
+    .create-room-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--ios-primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      transition: all 0.3s;
+      margin-bottom: 1.5rem;
+      text-decoration: none;
+    }
+
+    .create-room-btn:hover {
+      background-color: var(--ios-primary-dark);
+      transform: translateY(-2px);
+      color: white;
+    }
+
+    .create-room-btn i {
+      margin-right: 0.5rem;
+    }
+
+    /* User dropdown */
+    .user-dropdown {
+      position: relative;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--ios-primary);
+      color: white;
+      font-weight: 600;
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      width: 220px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      padding: 0.5rem;
+      z-index: 1000;
+      margin-top: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: none;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .dropdown-item:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .dropdown-item i {
+      margin-right: 0.75rem;
+      font-size: 1.1rem;
+      width: 20px;
+      text-align: center;
+      color: var(--ios-gray-2);
+    }
+
+    /* Dark mode toggle */
+    .ios-theme-toggle {
+      position: fixed;
+      z-index: 10;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ios-theme-toggle button {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      cursor: pointer;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .content-area {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        top: 0;
+        margin-bottom: 1.5rem;
+      }
+
+      .room-list {
+        max-height: 300px;
+      }
+    }
+
+    .mode-notification {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+      animation: fadeInOut 2s forwards;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, 20px); }
+      20% { opacity: 1; transform: translate(-50%, 0); }
+      80% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -20px); }
+    }
+
+    /* Spline container styles */
+    .spline-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+      opacity: 0.3;
+      filter: brightness(0.8) contrast(1.1) saturate(1.2);
+      transition: opacity 0.5s ease;
+    }
+
+    /* Performance mode */
+    body.performance-mode .spline-container {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Spline Background -->
+  <div class="spline-container">
+    <spline-viewer url="https://prod.spline.design/HAPDwhAWHdkj3Od2/scene.splinecode" loading="lazy"></spline-viewer>
+  </div>
+
+  <div class="dashboard-container">
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+      <div class="container-fluid d-flex justify-content-between align-items-center">
+        <a class="navbar-brand" href="/">
+          CodeCollab
+        </a>
+        <div class="d-flex align-items-center">
+          <div class="user-dropdown ms-3">
+            <div class="user-avatar" id="userDropdownToggle">
+              <% if (typeof user !== 'undefined' && user.picture) { %>
+                <img src="<%= user.picture %>" alt="User Avatar">
+              <% } else { %>
+                JM
+              <% } %>
+            </div>
+            <div class="dropdown-menu" id="userDropdownMenu">
+              <div class="dropdown-item">
+                <i class="bi bi-person"></i>
+                Profile
+              </div>
+              <div class="dropdown-item">
+                <i class="bi bi-gear"></i>
+                Settings
+              </div>
+              <a href="/auth/signout" class="dropdown-item">
+                <i class="bi bi-box-arrow-right"></i>
+                Sign Out
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="content-area">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <a href="/room/create" class="create-room-btn">
+          <i class="bi bi-plus-circle"></i> Create New Room
+        </a>
+
+        <div class="sidebar-heading">Your Rooms</div>
+        <div class="room-list" id="roomList">
+          <!-- Room items will be dynamically added here -->
+          <div class="d-flex justify-content-center py-4 text-muted">
+            <div class="spinner-border" role="status" id="roomsLoadingSpinner">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          <a href="/docs" class="btn btn-sm btn-outline-light w-100">
+            <i class="bi bi-question-circle me-1"></i> Help & Documentation
+          </a>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <h1 class="page-title">Dashboard</h1>
+
+        <!-- Dashboard Cards -->
+        <div class="dashboard-cards">
+          <div class="dashboard-card">
+            <div class="card-icon">
+              <i class="bi bi-code-square"></i>
+            </div>
+            <div class="card-title">Active Sessions</div>
+            <div class="card-value">4</div>
+            <div class="card-trend trend-up">
+              <i class="bi bi-arrow-up me-1"></i> 12% from last week
+            </div>
+          </div>
+
+          <div class="dashboard-card">
+            <div class="card-icon" style="background-color: rgba(90, 200, 250, 0.1); color: var(--ios-secondary);">
+              <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="card-title">Coding Hours</div>
+            <div class="card-value">26.5</div>
+            <div class="card-trend trend-up">
+              <i class="bi bi-arrow-up me-1"></i> 8% from last week
+            </div>
+          </div>
+
+          <div class="dashboard-card">
+            <div class="card-icon" style="background-color: rgba(76, 217, 100, 0.1); color: var(--ios-success);">
+              <i class="bi bi-people"></i>
+            </div>
+            <div class="card-title">Collaborators</div>
+            <div class="card-value">9</div>
+            <div class="card-trend trend-up">
+              <i class="bi bi-arrow-up me-1"></i> 2 new this week
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="activity-section">
+          <h2 class="section-title">Recent Activity</h2>
+
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-avatar">
+                <img src="https://ui-avatars.com/api/?name=Alex+Smith&background=random" alt="Alex Smith">
+              </div>
+              <div class="activity-content">
+                <div class="activity-text">Alex Smith joined your "JavaScript Algorithms" room</div>
+                <div class="activity-time">2 hours ago</div>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <div class="activity-avatar">
+                <img src="https://ui-avatars.com/api/?name=Sarah+Jones&background=random" alt="Sarah Jones">
+              </div>
+              <div class="activity-content">
+                <div class="activity-text">Sarah Jones edited "React State Management" code</div>
+                <div class="activity-time">Yesterday at 4:30 PM</div>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <div class="activity-avatar">
+                <img src="https://ui-avatars.com/api/?name=You&background=random" alt="You">
+              </div>
+              <div class="activity-content">
+                <div class="activity-text">You created a new room "Python Data Structures"</div>
+                <div class="activity-time">2 days ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Toggle user dropdown
+      const userDropdownToggle = document.getElementById('userDropdownToggle');
+      const userDropdownMenu = document.getElementById('userDropdownMenu');
+
+      userDropdownToggle.addEventListener('click', function() {
+        userDropdownMenu.classList.toggle('show');
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(event) {
+        if (!userDropdownToggle.contains(event.target) && !userDropdownMenu.contains(event.target)) {
+          userDropdownMenu.classList.remove('show');
+        }
+      });
+
+      // Fetch rooms data
+      fetchRooms();
+    });
+
+    async function fetchRooms() {
+      try {
+        const response = await fetch('/api/rooms/status');
+        if (!response.ok) {
+          throw new Error('Failed to fetch rooms');
+        }
+
+        const rooms = await response.json();
+        displayRooms(rooms);
+      } catch (error) {
+        console.error('Error fetching rooms:', error);
+        document.getElementById('roomList').innerHTML = `
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-exclamation-circle fs-4 d-block mb-2"></i>
+            Failed to load rooms
+          </div>
+        `;
+      } finally {
+        document.getElementById('roomsLoadingSpinner').style.display = 'none';
+      }
+    }
+
+    function displayRooms(rooms) {
+      const roomList = document.getElementById('roomList');
+
+      if (!rooms || rooms.length === 0) {
+        roomList.innerHTML = `
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-folder-plus fs-4 d-block mb-2"></i>
+            No rooms yet. Create your first room!
+          </div>
+        `;
+        return;
+      }
+
+      let roomsHtml = '';
+
+      rooms.forEach(room => {
+        const languageIcon = getLanguageIcon(room.language);
+
+        roomsHtml += `
+          <a href="/room/${room.id}" class="room-item text-decoration-none">
+            <div class="room-icon">
+              <i class="bi ${languageIcon}"></i>
+            </div>
+            <div class="room-info">
+              <div class="room-name">${room.name}</div>
+              <div class="room-details">
+                <span>${room.language}</span>
+                <span class="ms-2">
+                  <i class="bi bi-people-fill"></i> ${room.activeUsers}
+                </span>
+              </div>
+            </div>
+          </a>
+        `;
+      });
+
+      roomList.innerHTML = roomsHtml;
+    }
+
+    function getLanguageIcon(language) {
+      const languageIcons = {
+        'JavaScript': 'bi-filetype-js',
+        'Python': 'bi-filetype-py',
+        'Java': 'bi-cup-hot',
+        'C++': 'bi-code-square',
+        'HTML': 'bi-filetype-html',
+        'CSS': 'bi-filetype-css',
+        'TypeScript': 'bi-filetype-tsx',
+        'PHP': 'bi-filetype-php',
+        'Ruby': 'bi-gem',
+        'Swift': 'bi-apple',
+        'Go': 'bi-record-circle',
+        'Rust': 'bi-gear',
+        'Kotlin': 'bi-android2',
+        'C#': 'bi-hash',
+      };
+
+      return languageIcons[language] || 'bi-code-slash';
+    }
+  </script>
+</body>
+</html>
