@@ -19,7 +19,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 3002;
+const port = process.env.PORT || 3002;
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
@@ -29,13 +29,14 @@ const activeRooms = new Map();
 // Configure session
 app.use(
   session({
-    secret: "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",
+    secret: process.env.SESSION_SECRET || "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",
     resave: false,
     saveUninitialized: true,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
     },
   }),
 );

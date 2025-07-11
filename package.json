@@ -1,4 +1,7 @@
 {
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "dependencies": {
     "body-parser": "^2.2.0",
     "dotenv": "^17.2.0",
@@ -14,15 +17,24 @@
     "socket.io": "^4.8.1",
     "uuid": "^11.1.0"
   },
-  "name": "test",
+  "name": "codecollab",
   "version": "1.0.0",
-  "description": "",
+  "description": "Real-time collaborative coding platform",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "node index.js",
+    "build": "echo \"No build step required\""
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "collaboration",
+    "coding",
+    "real-time",
+    "socket.io",
+    "node"
+  ],
+  "author": "Jayashish Muppur",
   "license": "ISC",
   "type": "module"
 }
