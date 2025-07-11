@@ -18,10 +18,18 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize express app
 const app = express();
 const port = process.env.PORT || 3002;
 const httpServer = createServer(app);
-const io = new Server(httpServer);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+  transports: ["websocket", "polling"],
+  allowEIO3: true,
+});
 
 // Store active rooms and users
 const activeRooms = new Map();
