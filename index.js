@@ -3,6 +3,7 @@ import { collection } from "./config.js";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
+import * as fs from "fs";
 import dotenv from "dotenv";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
@@ -26,6 +27,12 @@ const httpServer = createServer(app);
 // Add health check endpoint for Vercel
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Add request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
 });
 
 // Add error handling middleware
@@ -224,7 +231,15 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 // Serve static files
-app.use(express.static(path.join(__dirname, "public")));
+app.use(
+  "/css",
+  express.static(path.join(__dirname, "public/css"), { maxAge: 0 }),
+);
+app.use(
+  "/img",
+  express.static(path.join(__dirname, "public/img"), { maxAge: 0 }),
+);
+app.use(express.static(path.join(__dirname, "public"), { maxAge: 0 }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json()); // For JSON requests
 
@@ -723,6 +738,13 @@ if (!process.env.SESSION_SECRET) {
     "For production, set a strong SESSION_SECRET in your environment variables.",
   );
 }
+// Log static file paths for debugging in Vercel
+console.log("Static files path:", path.join(__dirname, "public"));
+console.log("CSS files path:", path.join(__dirname, "public/css"));
+console.log(
+  "CSS file exists:",
+  fs.existsSync(path.join(__dirname, "public/css/ios-style.css")),
+);
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (reason, promise) => {
