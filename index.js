@@ -51,7 +51,9 @@ const activeRooms = new Map();
 // Session middleware with Vercel-compatible settings
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "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",
+    secret:
+      process.env.SESSION_SECRET ||
+      "codecollab_dev_secret_replace_in_production",
     resave: false,
     saveUninitialized: true,
     cookie: {
@@ -711,6 +713,16 @@ httpServer
 // For serverless environments like Vercel, also export the app
 // This allows Vercel to import the Express app directly
 export default app;
+
+// Log a warning if no session secret is set
+if (!process.env.SESSION_SECRET) {
+  console.warn(
+    "WARNING: No SESSION_SECRET environment variable set. Using a fallback secret.",
+  );
+  console.warn(
+    "For production, set a strong SESSION_SECRET in your environment variables.",
+  );
+}
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (reason, promise) => {
