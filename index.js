@@ -24,6 +24,9 @@ const app = express();
 const port = process.env.PORT || 3002;
 const httpServer = createServer(app);
 
+// Trust proxy for Vercel environment
+app.set("trust proxy", 1);
+
 app.use(express.static("public"));
 
 // Add health check endpoint for Vercel
@@ -92,6 +95,7 @@ app.use(
     },
     // Memory store is fine for Vercel serverless functions
     // For production, consider using a database or Redis store
+    proxy: true, // Trust proxy - needed for secure cookies in Vercel
   }),
 );
 
@@ -185,15 +189,20 @@ passport.use(
   "google",
   new GoogleStrategy(
     {
-      clientID: process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
+      clientID: process.env.GOOGLE_CLIENT_ID || process.env.CLIENT_ID,
       clientSecret:
-        process.env.CLIENT_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_CLIENT_SECRET || process.env.CLIENT_GOOGLE_SECRET,
       callbackURL:
+        process.env.GOOGLE_CALLBACK_URL ||
         process.env.CALLBACK_URL ||
-        "https://code-collab-beta-v1.vercel.app/auth/google/callback",
+        (process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}/auth/google/callback`
+          : "http://localhost:3002/auth/google/callback"),
       userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+      passReqToCallback: true,
+      proxy: true,
     },
-    async (accessToken, refreshToken, profile, cb) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
         console.log("Google profile:", profile);
         console.log("Looking up Google user with ID:", profile.id);
@@ -553,24 +562,89 @@ app.get("/auth/forgot-password", (req, res) => {
   res.render("inline-forgot-password.ejs", { title: "Forgot Password" });
 });
 
+// Add health check endpoint to debug authentication issues
+app.get("/auth/debug", (req, res) => {
+  res.json({
+    env: process.env.NODE_ENV,
+    vercelUrl: process.env.VERCEL_URL,
+    baseUrl: req.protocol + "://" + req.get("host"),
+    user: req.user ? { id: req.user.id, email: req.user.email } : null,
+    session: req.session ? { id: req.session.id } : null,
+    headers: {
+      host: req.get("host"),
+      referer: req.get("referer"),
+      "user-agent": req.get("user-agent"),
+      "x-forwarded-for": req.get("x-forwarded-for"),
+      "x-forwarded-proto": req.get("x-forwarded-proto"),
+    },
+    callbackUrl:
+      process.env.GOOGLE_CALLBACK_URL ||
+      process.env.CALLBACK_URL ||
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}/auth/google/callback`
+        : "http://localhost:3002/auth/google/callback"),
+  });
+});
+
 // Google OAuth routes
 app.get(
   "/auth/google",
+  (req, res, next) => {
+    // Store original URL in the session for redirection after authentication
+    req.session.returnTo = req.query.returnTo || "/dashboard";
+    console.log(
+      "Google Auth - Starting authentication flow, returnTo:",
+      req.session.returnTo,
+    );
+    console.log("Google Auth - Current host:", req.get("host"));
+    console.log("Google Auth - Protocol:", req.protocol);
+    next();
+  },
   passport.authenticate("google", {
     scope: ["profile", "email"],
+    prompt: "select_account",
   }),
 );
 
 app.get(
   "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/auth/signin" }),
+  (req, res, next) => {
+    console.log(
+      "Google Auth Callback - Received callback with query:",
+      req.query,
+    );
+    if (req.query.error) {
+      console.error("Google Auth Callback - OAuth error:", req.query.error);
+      return res.redirect(
+        "/auth/signin?error=" +
+          encodeURIComponent("Google authentication failed"),
+      );
+    }
+    next();
+  },
+  passport.authenticate("google", {
+    failureRedirect: "/auth/signin?error=Authentication+failed",
+    failWithError: true,
+  }),
   function (req, res) {
     console.log("Google auth successful, redirecting to dashboard");
     console.log("User authenticated:", req.user);
     console.log("Session after Google auth:", req.session);
     // Store auth type in session for debugging
     req.session.authType = "google";
-    res.redirect("/dashboard");
+    // Redirect to the original URL or default to dashboard
+    const redirectUrl = req.session.returnTo || "/dashboard";
+    delete req.session.returnTo;
+    res.redirect(redirectUrl);
+  },
+  function (err, req, res, next) {
+    console.error("Google Auth Error:", err);
+    res.redirect(
+      "/auth/signin?error=" +
+        encodeURIComponent(
+          "Authentication failed: " + (err.message || "Unknown error"),
+        ),
+    );
   },
 );
 
