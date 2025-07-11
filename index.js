@@ -22,19 +22,33 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3002;
 const httpServer = createServer(app);
+
+// Add health check endpoint for Vercel
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something broke!");
+});
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: process.env.NODE_ENV === "production" ? [/\.vercel\.app$/] : "*",
     methods: ["GET", "POST"],
+    credentials: true,
   },
   transports: ["websocket", "polling"],
   allowEIO3: true,
+  path: "/socket.io/",
 });
 
 // Store active rooms and users
 const activeRooms = new Map();
 
 // Configure session
+// Session middleware with Vercel-compatible settings
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "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",
@@ -44,8 +58,10 @@ app.use(
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
+    // Memory store is fine for Vercel serverless functions
+    // For production, consider using a database or Redis store
   }),
 );
 
@@ -675,7 +691,29 @@ io.on("connection", (socket) => {
   });
 });
 
+// Error handling for Vercel serverless environment
+const handleServerError = (err) => {
+  console.error("Server error:", err);
+  // In production, you might want to log to a service
+  if (process.env.NODE_ENV === "production") {
+    // Log to your preferred service
+    console.error("Production server error:", err.message, err.stack);
+  }
+};
+
 // Start the server
-httpServer.listen(port, () => {
-  console.log("Server is listening on port:", port);
+httpServer
+  .listen(port, () => {
+    console.log("Server is listening on port:", port);
+  })
+  .on("error", handleServerError);
+
+// For serverless environments like Vercel, also export the app
+// This allows Vercel to import the Express app directly
+export default app;
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  // In a production environment, you may want to do additional logging
 });
