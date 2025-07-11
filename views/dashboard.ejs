@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | CodeCollab</title>
+  <link rel="stylesheet" href="/css/ios-style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.24/build/spline-viewer.js"></script>
+  <style>
+    body {
+      background-color: #0f172a;
+      overflow-x: hidden;
+    }
+
+    .dashboard-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navbar styles */
+    .top-navbar {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: white;
+      text-decoration: none;
+    }
+
+    .navbar-nav .nav-link {
+      color: rgba(255, 255, 255, 0.8);
+      transition: color 0.3s;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+    }
+
+    .navbar-nav .nav-link:hover {
+      color: white;
+    }
+
+    .navbar-profile {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s;
+    }
+
+    .navbar-profile:hover {
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: scale(1.05);
+    }
+
+    .navbar-profile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Main content layout */
+    .main-content {
+      display: flex;
+      flex: 1;
+    }
+
+    /* Sidebar styles */
+    .sidebar {
+      width: 260px;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 1.5rem 1rem;
+      height: calc(100vh - 60px);
+      position: sticky;
+      top: 60px;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2rem;
+    }
+
+    .sidebar-heading {
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+    }
+
+    .sidebar-menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sidebar-menu li {
+      margin-bottom: 0.5rem;
+    }
+
+    .sidebar-menu a {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      border-radius: 8px;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .sidebar-menu a:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .sidebar-menu a.active {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+
+    .sidebar-menu i {
+      margin-right: 0.75rem;
+      font-size: 1.25rem;
+    }
+
+    /* Dashboard content */
+    .dashboard-content {
+      flex: 1;
+      padding: 2rem;
+    }
+
+    /* Cards */
+    .dashboard-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: all 0.3s;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .card-title i {
+      margin-right: 0.75rem;
+      font-size: 1.5rem;
+      color: #3b82f6;
+    }
+
+    .live-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #4cd964;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      position: relative;
+    }
+
+    .live-indicator::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: inherit;
+      border-radius: inherit;
+      animation: pulse 1.5s ease-out infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(3);
+        opacity: 0;
+      }
+    }
+
+    .room-count {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+      border-radius: 20px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-left: auto;
+    }
+
+    .room-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .room-item {
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s;
+    }
+
+    .room-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .room-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 1rem;
+      color: #3b82f6;
+      font-size: 1.25rem;
+    }
+
+    .room-info {
+      flex: 1;
+    }
+
+    .room-name {
+      font-weight: 600;
+      color: white;
+      margin-bottom: 0.25rem;
+    }
+
+    .room-meta {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .room-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .room-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      padding: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .room-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .room-btn-primary {
+      background: #3b82f6;
+    }
+
+    .room-btn-primary:hover {
+      background: #2563eb;
+    }
+
+    /* Activity feed */
+    .activity-item {
+      display: flex;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .activity-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 1rem;
+      color: #3b82f6;
+      flex-shrink: 0;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-text {
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 0.25rem;
+    }
+
+    .activity-time {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* User avatars */
+    .avatar-group {
+      display: flex;
+      margin-top: 1rem;
+    }
+
+    .active-users-badge {
+      display: inline-block;
+      background: rgba(76, 217, 100, 0.2);
+      color: #4cd964;
+      border-radius: 20px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid rgba(15, 23, 42, 0.9);
+      margin-left: -10px;
+      transition: transform 0.3s;
+      position: relative;
+    }
+
+    .avatar:first-child {
+      margin-left: 0;
+    }
+
+    .avatar:hover {
+      transform: translateY(-5px);
+      z-index: 10;
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .avatar.online::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #4cd964;
+      border-radius: 50%;
+      border: 2px solid rgba(15, 23, 42, 0.9);
+      bottom: 0;
+      right: 0;
+    }
+
+    /* Quick join section */
+    .quick-join {
+      display: flex;
+      margin-bottom: 1.5rem;
+    }
+
+    .quick-join input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 8px 0 0 8px;
+    }
+
+    .quick-join button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0 8px 8px 0;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .quick-join button:hover {
+      background: #2563eb;
+    }
+
+    /* Challenge card */
+    .challenge-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: #ff9500;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 20px;
+    }
+
+    /* Create room modal */
+    .modal-content {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: white;
+    }
+
+    .modal-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .form-control, .form-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      border-radius: 8px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: white;
+      box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+    }
+
+    /* Dark mode */
+    .dark-mode .top-navbar {
+      background: rgba(30, 30, 32, 0.8);
+    }
+
+    .dark-mode .sidebar {
+      background: rgba(28, 28, 30, 0.9);
+    }
+
+    .dark-mode .dashboard-card {
+      background: rgba(44, 44, 46, 0.4);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .dark-mode .dashboard-card:hover {
+      background: rgba(44, 44, 46, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <!-- Spline Background -->
+  <div class="spline-container">
+    <spline-viewer url="https://prod.spline.design/HAPDwhAWHdkj3Od2/scene.splinecode"></spline-viewer>
+  </div>
+
+  <!-- Theme Toggle Button -->
+  <div class="ios-theme-toggle">
+    <button id="themeToggle" title="Toggle Dark/Light Mode">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"></circle>
+        <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Performance Mode Toggle Button -->
+  <div class="ios-performance-toggle">
+    <button id="performanceToggle" title="Toggle Performance Mode">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div class="dashboard-container">
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg top-navbar">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">CodeCollab</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-bs-toggle="tooltip" data-bs-title="Notifications">
+                <i class="bi bi-bell"></i>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-bs-toggle="tooltip" data-bs-title="Settings">
+                <i class="bi bi-gear"></i>
+              </a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="navbar-profile">
+                  <img src="<%= user && user.picture ? user.picture : 'https://randomuser.me/api/portraits/men/32.jpg' %>" alt="Profile">
+                </div>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                <li><a class="dropdown-item" href="#">My Profile (<%= user && user.fullname ? user.fullname : 'User' %>)</a></li>
+                <li><a class="dropdown-item" href="#">Account Settings</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/auth/signout">Sign Out</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="main-content">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-section">
+          <h2 class="sidebar-heading">Your Rooms</h2>
+          <ul class="sidebar-menu">
+            <li>
+              <a href="/dashboard" class="active">
+                <i class="bi bi-house-door"></i> My Rooms
+              </a>
+            </li>
+            <li>
+              <a href="#" data-bs-toggle="modal" data-bs-target="#createRoomModal">
+                <i class="bi bi-plus-circle"></i> Create Room
+              </a>
+            </li>
+            <li>
+              <a href="#" data-bs-toggle="modal" data-bs-target="#joinRoomModal">
+                <i class="bi bi-door-open"></i> Join Room
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h2 class="sidebar-heading">Teams</h2>
+          <ul class="sidebar-menu">
+            <li>
+              <a href="#">
+                <i class="bi bi-people"></i> Frontend Squad
+              </a>
+            </li>
+            <li>
+              <a href="#">
+                <i class="bi bi-people"></i> Backend Wizards
+              </a>
+            </li>
+            <li>
+              <a href="#">
+                <i class="bi bi-plus-circle"></i> Create Team
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section">
+          <h2 class="sidebar-heading">Activity</h2>
+          <ul class="sidebar-menu">
+            <li>
+              <a href="#">
+                <i class="bi bi-clock-history"></i> Recent Activity
+              </a>
+            </li>
+            <li>
+              <a href="#">
+                <i class="bi bi-bookmark"></i> Saved Snippets
+              </a>
+            </li>
+            <li>
+              <a href="#">
+                <i class="bi bi-chat-left-text"></i> Comments
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div class="dashboard-content">
+        <!-- Quick Join -->
+        <form action="/room/join" method="GET" class="quick-join">
+          <input type="text" name="id" placeholder="Enter Room ID or Name..." class="form-control" required>
+          <button type="submit" class="btn">
+            <i class="bi bi-box-arrow-in-right"></i> Join
+          </button>
+        </form>
+
+        <div class="row mb-4">
+          <div class="col">
+            <h1 class="text-white mb-3">
+              Welcome back, <span class="text-primary"><%= user && user.fullname ? user.fullname.split(' ')[0] : 'User' %></span>
+            </h1>
+            <p class="text-white-50">Your collaborative coding workspace is ready. Start a new room or join an existing one.</p>
+            <div class="active-users-badge" id="activeUsersCount"></div>
+          </div>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+          <!-- Live Rooms Card -->
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="card-title">
+                <div class="live-indicator"></div> Live Rooms
+                <span class="room-count" id="activeRoomsCount">0</span>
+              </div>
+              <ul class="room-list" id="activeRoomsList">
+                <!-- Active rooms will be loaded here dynamically -->
+                <li class="room-item no-rooms-message">
+                  <div class="room-info">
+                    <div class="room-name">No active rooms</div>
+                    <div class="room-meta">Create a new room to get started</div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Your Projects Card -->
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="card-title">
+                <i class="bi bi-folder"></i> Your Projects
+              </div>
+              <ul class="room-list">
+                <li class="room-item">
+                  <div class="room-icon">
+                    <i class="bi bi-file-earmark-code"></i>
+                  </div>
+                  <div class="room-info">
+                    <div class="room-name">E-commerce App</div>
+                    <div class="room-meta">Last edited: 2 hours ago</div>
+                  </div>
+                  <div class="room-actions">
+                    <a href="/room/ecommerce-app" class="room-btn">
+                      <i class="bi bi-box-arrow-in-right"></i>
+                    </a>
+                  </div>
+                </li>
+                <li class="room-item">
+                  <div class="room-icon">
+                    <i class="bi bi-file-earmark-code"></i>
+                  </div>
+                  <div class="room-info">
+                    <div class="room-name">Task Manager</div>
+                    <div class="room-meta">Last edited: Yesterday</div>
+                  </div>
+                  <div class="room-actions">
+                    <a href="/room/task-manager" class="room-btn">
+                      <i class="bi bi-box-arrow-in-right"></i>
+                    </a>
+                  </div>
+                </li>
+                <li class="room-item">
+                  <div class="room-icon">
+                    <i class="bi bi-file-earmark-code"></i>
+                  </div>
+                  <div class="room-info">
+                    <div class="room-name">Portfolio Site</div>
+                    <div class="room-meta">Last edited: 3 days ago</div>
+                  </div>
+                  <div class="room-actions">
+                    <a href="/room/portfolio-site" class="room-btn">
+                      <i class="bi bi-box-arrow-in-right"></i>
+                    </a>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Suggested Collaborators Card -->
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="card-title">
+                <i class="bi bi-people"></i> Suggested Collaborators
+              </div>
+              <ul class="room-list">
+                <li class="room-item">
+                  <div class="room-icon">
+                    <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                  </div>
+                  <div class="room-info">
+                    <div class="room-name">Sophia Chen</div>
+                    <div class="room-meta">3 mutual rooms • Last seen: Today</div>
+                  </div>
+                  <div class="room-actions">
+                    <button class="room-btn">
+                      <i class="bi bi-person-plus"></i>
+                    </button>
+                  </div>
+                </li>
+                <li class="room-item">
+                  <div class="room-icon">
+                    <img src="https://randomuser.me/api/portraits/men/75.jpg" alt="User" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                  </div>
+                  <div class="room-info">
+                    <div class="room-name">Marcus Johnson</div>
+                    <div class="room-meta">2 mutual rooms • Last seen: Today</div>
+                  </div>
+                  <div class="room-actions">
+                    <button class="room-btn">
+                      <i class="bi bi-person-plus"></i>
+                    </button>
+                  </div>
+                </li>
+                <li class="room-item">
+                  <div class="room-icon">
+                    <img src="https://randomuser.me/api/portraits/women/22.jpg" alt="User" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">
+                  </div>
+                  <div class="room-info">
+                    <div class="room-name">Eliza Kim</div>
+                    <div class="room-meta">1 mutual room • Last seen: Yesterday</div>
+                  </div>
+                  <div class="room-actions">
+                    <button class="room-btn">
+                      <i class="bi bi-person-plus"></i>
+                    </button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Second Row -->
+        <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+          <!-- Code Challenge Card -->
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="challenge-badge">Daily Challenge</div>
+              <div class="card-title">
+                <i class="bi bi-trophy"></i> Code Challenge
+              </div>
+              <div class="challenge-content text-white-50 mb-3">
+                <p class="mb-2"><strong class="text-white">Array Manipulation:</strong> Write a function that finds the longest consecutive sequence in an array of integers.</p>
+                <p>Given [100, 4, 200, 1, 3, 2], the longest consecutive sequence is [1, 2, 3, 4], so return 4.</p>
+              </div>
+              <button class="btn btn-primary">Start Challenge</button>
+            </div>
+          </div>
+
+          <!-- Recent Activity Card -->
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="card-title">
+                <i class="bi bi-activity"></i> Recent Activity
+              </div>
+              <div class="activity-feed">
+                <div class="activity-item">
+                  <div class="activity-icon">
+                    <i class="bi bi-pencil"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-text">
+                      <strong>Marcus</strong> edited <span class="text-primary">TeamProject.js</span>
+                    </div>
+                    <div class="activity-time">5 minutes ago</div>
+                  </div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon">
+                    <i class="bi bi-door-open"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-text">
+                      <strong>Sophia</strong> joined room <span class="text-primary">Frontend Squad</span>
+                    </div>
+                    <div class="activity-time">15 minutes ago</div>
+                  </div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon">
+                    <i class="bi bi-chat-left-text"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-text">
+                      <strong>Eliza</strong> commented on your code in <span class="text-primary">API Development</span>
+                    </div>
+                    <div class="activity-time">1 hour ago</div>
+                  </div>
+                </div>
+                <div class="activity-item">
+                  <div class="activity-icon">
+                    <i class="bi bi-file-earmark-plus"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-text">
+                      <strong>You</strong> created a new room <span class="text-primary">Database Design</span>
+                    </div>
+                    <div class="activity-time">3 hours ago</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Featured Rooms Section -->
+        <div class="row mb-3">
+          <div class="col">
+            <h3 class="text-white mb-3">Featured Rooms</h3>
+          </div>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-4 g-4 mb-5">
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="card-title">
+                <i class="bi bi-star"></i> JavaScript Basics
+              </div>
+              <p class="text-white-50 mb-3">Learn and practice JavaScript fundamentals with other beginners.</p>
+              <div class="avatar-group">
+                <div class="avatar online">
+                  <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User">
+                </div>
+                <div class="avatar">
+                  <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User">
+                </div>
+                <div class="avatar online">
+                  <img src="https://randomuser.me/api/portraits/men/76.jpg" alt="User">
+                </div>
+                <div class="avatar">
+                  <img src="https://randomuser.me/api/portraits/women/33.jpg" alt="User">
+                </div>
+              </div>
+              <a href="/room/javascript-basics" class="btn btn-primary mt-3 w-100">Join Room</a>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="card-title">
+                <i class="bi bi-star"></i> React Deep Dive
+              </div>
+              <p class="text-white-50 mb-3">Advanced React patterns and performance optimization techniques.</p>
+              <div class="avatar-group">
+                <div class="avatar">
+                  <img src="https://randomuser.me/api/portraits/women/22.jpg" alt="User">
+                </div>
+                <div class="avatar online">
+                  <img src="https://randomuser.me/api/portraits/men/45.jpg" alt="User">
+                </div>
+                <div class="avatar">
+                  <img src="https://randomuser.me/api/portraits/women/67.jpg" alt="User">
+                </div>
+              </div>
+              <a href="/room/react-deep-dive" class="btn btn-primary mt-3 w-100">Join Room</a>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="card-title">
+                <i class="bi bi-star"></i> Python Data Science
+              </div>
+              <p class="text-white-50 mb-3">Collaborative data analysis and visualization with Python.</p>
+              <div class="avatar-group">
+                <div class="avatar online">
+                  <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User">
+                </div>
+                <div class="avatar">
+                  <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User">
+                </div>
+                <div class="avatar online">
+                  <img src="https://randomuser.me/api/portraits/men/76.jpg" alt="User">
+                </div>
+              </div>
+              <a href="/room/python-data-science" class="btn btn-primary mt-3 w-100">Join Room</a>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="dashboard-card">
+              <div class="card-title">
+                <i class="bi bi-star"></i> System Design
+              </div>
+              <p class="text-white-50 mb-3">Collaborative architecture planning and system design sessions.</p>
+              <div class="avatar-group">
+                <div class="avatar">
+                  <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User">
+                </div>
+                <div class="avatar online">
+                  <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User">
+                </div>
+                <div class="avatar">
+                  <img src="https://randomuser.me/api/portraits/men/76.jpg" alt="User">
+                </div>
+              </div>
+              <a href="/room/system-design" class="btn btn-primary mt-3 w-100">Join Room</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Room Modal -->
+  <div class="modal fade" id="createRoomModal" tabindex="-1" aria-labelledby="createRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="createRoomModalLabel">Create a New Room</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form action="/room/create" method="POST">
+            <div class="mb-3">
+              <label for="roomName" class="form-label">Room Name</label>
+              <input type="text" class="form-control" id="roomName" name="roomName" placeholder="Enter room name" required>
+            </div>
+            <div class="mb-3">
+              <label for="roomLanguage" class="form-label">Programming Language</label>
+              <select class="form-select" id="roomLanguage" name="roomLanguage" required>
+                <option value="" selected disabled>Select language</option>
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="java">Java</option>
+                <option value="csharp">C#</option>
+                <option value="cpp">C++</option>
+                <option value="php">PHP</option>
+                <option value="ruby">Ruby</option>
+                <option value="go">Go</option>
+                <option value="swift">Swift</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="roomDescription" class="form-label">Room Description</label>
+              <textarea class="form-control" id="roomDescription" name="roomDescription" rows="3" placeholder="Describe your room..."></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="roomVisibility" class="form-label">Room Visibility</label>
+              <select class="form-select" id="roomVisibility" name="roomVisibility">
+                <option value="public">Public (Anyone can join)</option>
+                <option value="private">Private (Invite only)</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="isPasswordProtected" name="isPasswordProtected">
+                <label class="form-check-label" for="isPasswordProtected">
+                  Password protect this room
+                </label>
+              </div>
+              <div id="passwordInputContainer" style="display: none;">
+                <label for="roomPassword" class="form-label">Room Password</label>
+                <input type="password" class="form-control" id="roomPassword" name="roomPassword" placeholder="Set a password for your room" minlength="4">
+                <div class="form-text">Password must be at least 4 characters long</div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Create Room</button>
+            </div>
+          </form>
+        </div>
+        <!-- Modal footer moved inside the form -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Join Room Modal -->
+  <div class="modal fade" id="joinRoomModal" tabindex="-1" aria-labelledby="joinRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="joinRoomModalLabel">Join a Room</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form action="/room/join" method="GET">
+            <div class="mb-3">
+              <label for="roomId" class="form-label">Room ID or Name</label>
+              <input type="text" class="form-control" id="roomId" name="id" placeholder="Enter room ID or name">
+            </div>
+            <div class="mb-3">
+              <label for="roomPassword" class="form-label">Room Password (Optional)</label>
+              <input type="password" class="form-control" id="roomPassword" name="password" placeholder="Enter room password if required">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Join Room</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Fetch active rooms data
+      fetchActiveRooms();
+
+      // Set interval to update active rooms every 10 seconds
+      setInterval(fetchActiveRooms, 10000);
+
+      // Enable Bootstrap tooltips
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+      // Theme toggle functionality
+      const themeToggle = document.getElementById('themeToggle');
+      let darkMode = false; // Start with light mode for iOS feel
+
+      // Check for saved theme preference
+      if (localStorage.getItem('darkMode') === 'true') {
+        darkMode = true;
+        document.body.classList.add('dark-mode');
+      }
+
+      themeToggle.addEventListener('click', () => {
+        darkMode = !darkMode;
+        document.body.classList.toggle('dark-mode', darkMode);
+        localStorage.setItem('darkMode', darkMode);
+      });
+
+      // Performance mode toggle
+      const performanceToggle = document.getElementById('performanceToggle');
+      let performanceMode = localStorage.getItem('performanceMode') === 'true';
+
+      // Apply performance mode if it was previously enabled
+      if (performanceMode) {
+        document.body.classList.add('performance-mode');
+        performanceToggle.classList.add('active');
+      } else {
+        document.body.classList.remove('performance-mode');
+        performanceToggle.classList.remove('active');
+      }
+
+      performanceToggle.addEventListener('click', () => {
+        performanceMode = !performanceMode;
+        document.body.classList.toggle('performance-mode', performanceMode);
+        performanceToggle.classList.toggle('active', performanceMode);
+        localStorage.setItem('performanceMode', performanceMode.toString());
+
+        // Add notification
+        const notification = document.createElement('div');
+        notification.className = 'mode-notification';
+        notification.textContent = performanceMode ? 'Performance Mode Enabled' : 'Full Graphics Mode Enabled';
+        document.body.appendChild(notification);
+
+        // Remove notification after animation
+        setTimeout(() => {
+          notification.remove();
+        }, 2000);
+      });
+    });
+
+    // Function to fetch active rooms
+    function fetchActiveRooms() {
+      fetch('/api/rooms/status')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          updateActiveRoomsUI(data);
+        })
+        .catch(error => {
+          console.error('Error fetching active rooms:', error);
+        });
+    }
+
+    // Toggle password input visibility
+    document.getElementById('isPasswordProtected').addEventListener('change', function() {
+      const passwordContainer = document.getElementById('passwordInputContainer');
+      passwordContainer.style.display = this.checked ? 'block' : 'none';
+
+      // Make password required only when checkbox is checked
+      const passwordInput = document.getElementById('roomPassword');
+      passwordInput.required = this.checked;
+
+      // If unchecked, clear any entered password
+      if (!this.checked) {
+        passwordInput.value = '';
+      }
+    });
+
+    // Function to update the UI with active rooms data
+    function updateActiveRoomsUI(data) {
+      const activeRoomsList = document.getElementById('activeRoomsList');
+      const activeRoomsCount = document.getElementById('activeRoomsCount');
+      const activeUsersCount = document.getElementById('activeUsersCount');
+
+      // Display error message if there's one in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const errorMessage = urlParams.get('error');
+      if (errorMessage) {
+        const errorAlert = document.createElement('div');
+        errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+        errorAlert.innerHTML = `${errorMessage} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+        const alertContainer = document.querySelector('.alert-container') || document.querySelector('.content');
+        alertContainer.prepend(errorAlert);
+
+        // Remove the error parameter from URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      // Update counts
+      activeRoomsCount.textContent = data.totalRooms;
+      activeUsersCount.textContent = data.totalUsers > 0 ? `${data.totalUsers} users online` : '';
+
+      // Display error message if there's one in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const errorMessage = urlParams.get('error');
+      if (errorMessage) {
+        const errorAlert = document.createElement('div');
+        errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+        errorAlert.innerHTML = `${errorMessage} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+        const alertContainer = document.querySelector('.alert-container') || document.querySelector('.content');
+        alertContainer.prepend(errorAlert);
+
+        // Remove the error parameter from URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      // Clear existing list
+      activeRoomsList.innerHTML = '';
+
+      // If no active rooms, show message
+      if (data.activeRooms.length === 0) {
+        activeRoomsList.innerHTML = `
+          <li class="room-item no-rooms-message">
+            <div class="room-info">
+              <div class="room-name">No active rooms</div>
+              <div class="room-meta">Create a new room to get started</div>
+            </div>
+          </li>
+        `;
+        return;
+      }
+
+      // Add active rooms to the list
+      data.activeRooms.forEach(room => {
+        const roomItem = document.createElement('li');
+        roomItem.className = 'room-item';
+
+        // Create user avatars HTML
+        let avatarsHTML = '';
+        if (room.users.length > 0) {
+          avatarsHTML = '<div class="avatar-group" style="margin-top: 8px;">';
+          room.users.slice(0, 4).forEach(user => {
+            avatarsHTML += `
+              <div class="avatar online">
+                <img src="${user.picture || 'https://randomuser.me/api/portraits/men/32.jpg'}" alt="${user.username}">
+              </div>
+            `;
+          });
+          avatarsHTML += '</div>';
+        }
+
+        roomItem.innerHTML = `
+          <div class="room-icon">
+            <i class="bi bi-code-slash"></i>
+          </div>
+          <div class="room-info">
+            <div class="room-name">Room ${room.roomId} ${room.isPasswordProtected ? '<i class="bi bi-lock-fill text-warning" title="Password Protected"></i>' : ''}</div>
+            <div class="room-meta">${room.userCount} users online</div>
+            ${avatarsHTML}
+          </div>
+          <div class="room-actions">
+            <a href="${room.isPasswordProtected ? '#' : '/room/' + room.roomId}"
+               class="room-btn room-btn-primary"
+               onclick="${room.isPasswordProtected ? `showPasswordPrompt('${room.roomId}')` : ''}"
+               ${room.isPasswordProtected ? 'data-room-id="' + room.roomId + '"' : ''}>
+              <i class="bi bi-box-arrow-in-right"></i>
+            </a>
+          </div>
+        `;
+
+        activeRoomsList.appendChild(roomItem);
+      });
+    }
+
+    // Function to show password prompt for protected rooms
+    function showPasswordPrompt(roomId) {
+      event.preventDefault();
+
+      // Create modal for password input if it doesn't exist
+      if (!document.getElementById('passwordPromptModal')) {
+        const modalHTML = `
+          <div class="modal fade" id="passwordPromptModal" tabindex="-1" aria-labelledby="passwordPromptModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="passwordPromptModalLabel">Password Required</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <form id="roomPasswordForm" action="/room/join" method="GET">
+                    <input type="hidden" id="passwordRoomId" name="id" value="">
+                    <div class="mb-3">
+                      <label for="roomPasswordInput" class="form-label">This room is password protected. Please enter the password:</label>
+                      <input type="password" class="form-control" id="roomPasswordInput" name="password" required>
+                    </div>
+                    <div id="passwordError" class="text-danger" style="display: none;">Incorrect password. Please try again.</div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-primary">Join Room</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Add event listener to the password form
+        document.getElementById('roomPasswordForm').addEventListener('submit', function(e) {
+          // The form will be submitted normally as it uses GET method
+          // We don't need to prevent default, but we can add validation if needed
+
+          // Track attempted password submissions
+          const roomId = document.getElementById('passwordRoomId').value;
+          const password = document.getElementById('roomPasswordInput').value;
+          console.log(`Attempting to join password-protected room ${roomId}`);
+        });
+      }
+
+      // Set the room ID in the form
+      document.getElementById('passwordRoomId').value = roomId;
+
+      // Clear any previous password and error message
+      document.getElementById('roomPasswordInput').value = '';
+      document.getElementById('passwordError').style.display = 'none';
+
+      // Show the modal
+      const passwordModal = new bootstrap.Modal(document.getElementById('passwordPromptModal'));
+      passwordModal.show();
+    }
+  </script>
+</body>
+</html>

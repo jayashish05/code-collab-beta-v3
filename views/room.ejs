@@ -1,0 +1,1990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= roomData.name %> | CodeCollab</title>
+  <link rel="stylesheet" href="/css/ios-style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/eclipse.min.css">
+  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.24/build/spline-viewer.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      background-color: #0f172a;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .room-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Top navbar styles */
+    .room-navbar {
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      z-index: 1000;
+    }
+
+    .room-navbar-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .room-navbar-title {
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: white;
+      margin-left: 1rem;
+    }
+
+    .room-navbar-info {
+      display: flex;
+      align-items: center;
+      margin-left: 1.5rem;
+    }
+
+    .room-status {
+      display: flex;
+      align-items: center;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.875rem;
+      margin-right: 1.5rem;
+    }
+
+    .live-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #4cd964;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      position: relative;
+    }
+
+    .live-indicator::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: inherit;
+      border-radius: inherit;
+      animation: pulse 1.5s ease-out infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(3);
+        opacity: 0;
+      }
+    }
+
+    .room-navbar-actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .room-navbar-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      padding: 0.5rem 0.75rem;
+      margin-left: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .room-navbar-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .room-navbar-btn i {
+      margin-right: 0.5rem;
+    }
+
+    .room-navbar-btn-primary {
+      background: #3b82f6;
+    }
+
+    .room-navbar-btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .user-avatars {
+      display: flex;
+      margin-right: 1rem;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid rgba(15, 23, 42, 0.9);
+      margin-left: -8px;
+      transition: transform 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .user-avatar:first-child {
+      margin-left: 0;
+    }
+
+    .user-avatar:hover {
+      transform: translateY(-3px);
+      z-index: 10;
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .user-avatar.online::after {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #4cd964;
+      border-radius: 50%;
+      border: 2px solid rgba(15, 23, 42, 0.9);
+      bottom: 0;
+      right: 0;
+    }
+
+    /* Main content area */
+    .editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+
+    .editor-header {
+      background: rgba(15, 23, 42, 0.8);
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .editor-tabs {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.2) rgba(15, 23, 42, 0.6);
+    }
+
+    .editor-tabs::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .editor-tabs::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .editor-tabs::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    .editor-tab {
+      padding: 0.5rem 1rem;
+      background: rgba(15, 23, 42, 0.6);
+      color: rgba(255, 255, 255, 0.7);
+      margin-right: 0.25rem;
+      border-radius: 4px 4px 0 0;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+    }
+
+    .editor-tab.active {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+
+    .editor-tab:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .editor-tab i {
+      margin-right: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .editor-tab .close-tab {
+      margin-left: 0.5rem;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    .editor-tab .close-tab:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .editor-actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .editor-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 4px;
+      color: white;
+      width: 32px;
+      height: 32px;
+      margin-left: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .editor-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .editor-content {
+      flex: 1;
+      display: flex;
+      position: relative;
+    }
+
+    .code-editor {
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+
+    /* CodeMirror customization */
+    .CodeMirror {
+      height: 100%;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow: auto !important;
+    }
+
+    .CodeMirror-scroll {
+      overflow-x: auto !important;
+      overflow-y: auto !important;
+    }
+
+    /* Sidebar styles */
+    .room-sidebar {
+      width: 300px;
+      background: rgba(15, 23, 42, 0.95);
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+      transition: width 0.3s ease;
+    }
+
+    .room-sidebar.collapsed {
+      width: 60px;
+    }
+
+    .sidebar-header {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-title {
+      font-weight: 600;
+      color: white;
+      font-size: 1rem;
+    }
+
+    .sidebar-collapse {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+
+    .sidebar-collapse:hover {
+      color: white;
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-tab {
+      flex: 1;
+      padding: 0.75rem 0;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: all 0.3s;
+      border-bottom: 2px solid transparent;
+      font-size: 0.875rem;
+    }
+
+    .sidebar-tab.active {
+      color: #3b82f6;
+      border-bottom-color: #3b82f6;
+    }
+
+    .sidebar-tab:hover:not(.active) {
+      color: white;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      height: 100%;
+    }
+
+    /* Chat section */
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      height: 100%;
+      overflow-y: auto;
+      flex: 1;
+      padding-right: 5px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      will-change: scroll-position;
+    }
+
+    .chat-message {
+      display: flex;
+      margin-bottom: 1rem;
+    }
+
+    .chat-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .chat-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .chat-content {
+      flex: 1;
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: baseline;
+      margin-bottom: 0.25rem;
+    }
+
+    .chat-username {
+      font-weight: 600;
+      color: white;
+      margin-right: 0.5rem;
+    }
+
+    .chat-time {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .chat-text {
+      color: rgba(255, 255, 255, 0.9);
+      padding: 0.5rem 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 0 8px 8px 8px;
+      line-height: 1.4;
+    }
+
+    .chat-message.own {
+      flex-direction: row-reverse;
+    }
+
+    .chat-message.own .chat-avatar {
+      margin-right: 0;
+      margin-left: 0.75rem;
+    }
+
+    .chat-message.own .chat-header {
+      flex-direction: row-reverse;
+    }
+
+    .chat-message.own .chat-username {
+      margin-right: 0;
+      margin-left: 0.5rem;
+    }
+
+    .chat-message.own .chat-text {
+      background: rgba(59, 130, 246, 0.2);
+      border-radius: 8px 0 8px 8px;
+    }
+
+    .chat-input-container {
+      padding: 0.75rem;
+      background: rgba(15, 23, 42, 0.8);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      position: sticky;
+      bottom: 0;
+    }
+
+    .chat-input-wrapper {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: white;
+      padding: 0.5rem;
+      outline: none;
+    }
+
+    .chat-input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .chat-send {
+      background: #3b82f6;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chat-send:hover {
+      background: #2563eb;
+    }
+
+    /* Participants tab */
+    .participant-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .participant-item {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+
+    .participant-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .participant-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 0.75rem;
+      position: relative;
+    }
+
+    .participant-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .participant-avatar.online::after {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #4cd964;
+      border-radius: 50%;
+      border: 2px solid rgba(15, 23, 42, 0.9);
+      bottom: 0;
+      right: 0;
+    }
+
+    .participant-info {
+      flex: 1;
+    }
+
+    .participant-name {
+      font-weight: 600;
+      color: white;
+      margin-bottom: 0.25rem;
+    }
+
+    .participant-status {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .participant-actions {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.25rem;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+
+    .participant-actions:hover {
+      color: white;
+    }
+
+    /* Settings panel */
+    .settings-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .settings-title {
+      font-weight: 600;
+      color: white;
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
+    }
+
+    .settings-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .settings-label {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .settings-toggle {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+
+    .settings-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.2);
+      transition: 0.4s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #3b82f6;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+
+    .settings-select {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      color: white;
+      padding: 0.5rem;
+      width: 120px;
+    }
+
+    .settings-select option {
+      background: rgba(15, 23, 42, 0.95);
+      color: white;
+    }
+
+    /* Console/Terminal styles */
+    .terminal-container {
+      background: #1e1e1e;
+      color: #f8f8f8;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      height: 200px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      overflow-y: auto;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .terminal-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .terminal-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .terminal-btn {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 0.875rem;
+    }
+
+    .terminal-btn:hover {
+      color: white;
+    }
+
+    .terminal-content {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      overflow-y: auto;
+    }
+
+    .terminal-line {
+      line-height: 1.5;
+      margin-bottom: 0.25rem;
+      display: flex;
+    }
+
+    .terminal-prompt {
+      color: #4cd964;
+      margin-right: 0.5rem;
+    }
+
+    .terminal-output {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .terminal-error {
+      color: #ff3b30;
+    }
+
+    .terminal-success {
+      color: #4cd964;
+    }
+
+    .terminal-warning {
+      color: #ffcc00;
+    }
+
+    .terminal-input-line {
+      display: flex;
+      align-items: center;
+    }
+
+    .terminal-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: white;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      outline: none;
+    }
+
+    /* Modals */
+    .modal-content {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: white;
+    }
+
+    .modal-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .form-control, .form-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      border-radius: 8px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: white;
+      box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+    }
+
+    /* Cursor indicators for multiple users */
+    .cm-user-cursor {
+      position: absolute;
+      width: 2px;
+      height: 16px;
+      background-color: #ff3b30;
+      z-index: 10;
+    }
+
+    .cm-user-cursor::after {
+      content: attr(data-user);
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      background-color: #ff3b30;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .room-sidebar {
+        position: absolute;
+        right: 0;
+        top: 60px;
+        height: calc(100vh - 60px);
+        z-index: 1000;
+        width: 300px;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+      }
+
+      .room-sidebar.active {
+        transform: translateX(0);
+      }
+
+      .editor-container {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Spline Background (subtle for the editor) -->
+  <div class="spline-container" style="opacity: 0.15;">
+    <spline-viewer url="https://prod.spline.design/HAPDwhAWHdkj3Od2/scene.splinecode"></spline-viewer>
+  </div>
+
+  <!-- Room Navbar -->
+  <div class="room-navbar">
+    <div class="room-navbar-left">
+      <a href="/dashboard" class="room-navbar-btn">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div class="room-navbar-title"><%= roomData.name %></div>
+      <div class="room-navbar-info">
+        <div class="room-status">
+          <span class="live-indicator"></span>
+          <span><span class="online-count">5</span> users online</span>
+        </div>
+        <div class="room-status">
+          <i class="bi bi-code-slash me-2"></i>
+          <span><%= roomData.language %></span>
+        </div>
+        <div class="room-status">
+          <i class="bi bi-info-circle me-2"></i>
+          <span>Room ID: <%= roomData.id %></span>
+        </div>
+      </div>
+    </div>
+    <div class="room-navbar-actions">
+      <div class="user-avatars">
+        <div class="user-avatar online">
+          <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User">
+        </div>
+        <div class="user-avatar online">
+          <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User">
+        </div>
+        <div class="user-avatar">
+          <img src="https://randomuser.me/api/portraits/men/76.jpg" alt="User">
+        </div>
+        <div class="user-avatar online">
+          <img src="https://randomuser.me/api/portraits/women/33.jpg" alt="User">
+        </div>
+        <div class="user-avatar">
+          <img src="https://randomuser.me/api/portraits/men/45.jpg" alt="User">
+        </div>
+      </div>
+      <button class="room-navbar-btn" id="toggleTerminalBtn">
+        <i class="bi bi-terminal"></i>
+        Terminal
+      </button>
+      <button class="room-navbar-btn" id="runCodeBtn">
+        <i class="bi bi-play-fill"></i>
+        Run
+      </button>
+      <button class="room-navbar-btn" id="toggleSidebarBtn">
+        <i class="bi bi-chat-left-text"></i>
+        Chat
+      </button>
+      <button class="room-navbar-btn room-navbar-btn-primary" id="saveCodeBtn">
+        <i class="bi bi-save"></i>
+        Save
+      </button>
+    </div>
+  </div>
+
+  <div class="room-container">
+    <!-- Editor Container -->
+    <div class="editor-container">
+      <!-- Editor Header with Tabs -->
+      <div class="editor-header">
+        <div class="editor-tabs">
+          <div class="editor-tab active">
+            <i class="bi bi-filetype-<%= roomData.language.toLowerCase() === 'javascript' ? 'js' : (roomData.language.toLowerCase() === 'python' ? 'py' : 'txt') %>"></i>
+            main.<%= roomData.language.toLowerCase() === 'javascript' ? 'js' : (roomData.language.toLowerCase() === 'python' ? 'py' : 'txt') %>
+            <span class="close-tab">×</span>
+          </div>
+          <div class="editor-tab">
+            <i class="bi bi-filetype-html"></i>
+            index.html
+            <span class="close-tab">×</span>
+          </div>
+          <div class="editor-tab">
+            <i class="bi bi-filetype-css"></i>
+            styles.css
+            <span class="close-tab">×</span>
+          </div>
+          <div class="editor-tab">
+            <i class="bi bi-plus"></i>
+          </div>
+        </div>
+        <div class="editor-actions">
+          <button class="editor-btn" title="Change Theme">
+            <i class="bi bi-palette"></i>
+          </button>
+          <button class="editor-btn" title="Font Size">
+            <i class="bi bi-type"></i>
+          </button>
+          <button class="editor-btn" title="Settings">
+            <i class="bi bi-gear"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Code Editor Area -->
+      <div class="editor-content">
+        <div class="code-editor" id="codeEditor"></div>
+      </div>
+
+      <!-- Terminal/Console (Hidden by default) -->
+      <div class="terminal-container" id="terminalContainer" style="display: none;">
+        <div class="terminal-header">
+          <div class="terminal-title">Terminal</div>
+          <div class="terminal-actions">
+            <button class="terminal-btn" title="Clear Terminal">
+              <i class="bi bi-trash"></i>
+            </button>
+            <button class="terminal-btn" id="closeTerminalBtn" title="Close Terminal">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+        </div>
+        <div class="terminal-content" id="terminalContent">
+          <div class="terminal-line">
+            <span class="terminal-prompt">$</span>
+            <span class="terminal-output">Welcome to CodeCollab Terminal. Type 'help' for available commands.</span>
+          </div>
+          <div class="terminal-line">
+            <span class="terminal-prompt">$</span>
+            <span class="terminal-output">Node.js v14.17.0</span>
+          </div>
+          <div class="terminal-line terminal-input-line">
+            <span class="terminal-prompt">$</span>
+            <input type="text" class="terminal-input" id="terminalInput" placeholder="Type a command...">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Room Sidebar -->
+    <div class="room-sidebar" id="roomSidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Room Chat</div>
+        <button class="sidebar-collapse" id="collapseSidebarBtn">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-tabs">
+        <div class="sidebar-tab active" data-tab="chat">
+          <i class="bi bi-chat-left-text"></i> Chat
+        </div>
+        <div class="sidebar-tab" data-tab="participants">
+          <i class="bi bi-people"></i> Participants
+        </div>
+        <div class="sidebar-tab" data-tab="settings">
+          <i class="bi bi-gear"></i> Settings
+        </div>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- Chat Tab (Default) -->
+        <div class="tab-content active" id="chatTab" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: relative;">
+          <style>
+            .system-message {
+              text-align: center;
+              margin: 10px 0;
+            }
+            .system-message .chat-text {
+              display: inline-block;
+              background: rgba(255, 255, 255, 0.1);
+              color: rgba(255, 255, 255, 0.7);
+              padding: 5px 10px;
+              border-radius: 20px;
+              font-size: 0.8rem;
+            }
+          </style>
+          <div class="chat-messages" id="chatMessages" style="flex: 1; overflow-y: auto; position: relative; max-height: calc(100vh - 320px); -webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+            <div class="chat-message">
+              <div class="chat-avatar">
+                <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User">
+              </div>
+              <div class="chat-content">
+                <div class="chat-header">
+                  <div class="chat-username">Welcome to <%= roomData.name %></div>
+                  <div class="chat-time">10:32 AM</div>
+                </div>
+                <div class="chat-text">
+                  This room was created for <%= roomData.description || 'collaborative coding' %>. Let's start working together!
+                </div>
+              </div>
+            </div>
+            <div class="chat-message">
+              <div class="chat-avatar">
+                <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User">
+              </div>
+              <div class="chat-content">
+                <div class="chat-header">
+                  <div class="chat-username">Sophia Lee</div>
+                  <div class="chat-time">10:34 AM</div>
+                </div>
+                <div class="chat-text">
+                  I've already set up the basic structure for the login component. Should we use JWT or session-based auth?
+                </div>
+              </div>
+            </div>
+            <div class="chat-message own">
+              <div class="chat-avatar">
+                <img src="<%= user?.picture || 'https://randomuser.me/api/portraits/men/76.jpg' %>" alt="User">
+              </div>
+              <div class="chat-content">
+                <div class="chat-header">
+                  <div class="chat-username"><%= user?.fullname || 'You' %></div>
+                  <div class="chat-time">10:36 AM</div>
+                </div>
+                <div class="chat-text">
+                  Let's go with JWT for better scalability. We can store it in localStorage and implement refresh tokens.
+                </div>
+              </div>
+            </div>
+            <div class="chat-message">
+              <div class="chat-avatar">
+                <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User">
+              </div>
+              <div class="chat-content">
+                <div class="chat-header">
+                  <div class="chat-username">Alex Chen</div>
+                  <div class="chat-time">10:37 AM</div>
+                </div>
+                <div class="chat-text">
+                  Good call. I'll update the server code to support JWT.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-container" style="flex-shrink: 0; margin-top: 10px; position: sticky; bottom: 0; width: 100%; background-color: #1e1e1e; z-index: 10; padding-bottom: env(safe-area-inset-bottom, 0px);">
+            <div class="chat-input-wrapper">
+              <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." autocomplete="off">
+              <button class="chat-send" id="sendChatBtn">
+                <i class="bi bi-send"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Participants Tab -->
+        <div class="tab-content" id="participantsTab" style="height: 100%; overflow-y: auto;">
+          <div class="participant-list">
+            <div class="participant-item">
+              <div class="participant-avatar online">
+                <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User">
+              </div>
+              <div class="participant-info">
+                <div class="participant-name">Alex Chen</div>
+                <div class="participant-status">Active now</div>
+              </div>
+              <div class="participant-actions">
+                <i class="bi bi-three-dots-vertical"></i>
+              </div>
+            </div>
+            <div class="participant-item">
+              <div class="participant-avatar online">
+                <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User">
+              </div>
+              <div class="participant-info">
+                <div class="participant-name">Sophia Lee</div>
+                <div class="participant-status">Active now</div>
+              </div>
+              <div class="participant-actions">
+                <i class="bi bi-three-dots-vertical"></i>
+              </div>
+            </div>
+            <div class="participant-item">
+              <div class="participant-avatar online">
+                <img src="<%= user?.picture || 'https://randomuser.me/api/portraits/men/76.jpg' %>" alt="User">
+              </div>
+              <div class="participant-info">
+                <div class="participant-name"><%= user?.fullname || 'You' %></div>
+                <div class="participant-status">Active now</div>
+              </div>
+              <div class="participant-actions">
+                <i class="bi bi-three-dots-vertical"></i>
+              </div>
+            </div>
+            <div class="participant-item">
+              <div class="participant-avatar">
+                <img src="https://randomuser.me/api/portraits/women/33.jpg" alt="User">
+              </div>
+              <div class="participant-info">
+                <div class="participant-name">Emma Wilson</div>
+                <div class="participant-status">Idle • 5 min ago</div>
+              </div>
+              <div class="participant-actions">
+                <i class="bi bi-three-dots-vertical"></i>
+              </div>
+            </div>
+            <div class="participant-item">
+              <div class="participant-avatar">
+                <img src="https://randomuser.me/api/portraits/men/45.jpg" alt="User">
+              </div>
+              <div class="participant-info">
+                <div class="participant-name">James Miller</div>
+                <div class="participant-status">Away • 15 min ago</div>
+              </div>
+              <div class="participant-actions">
+                <i class="bi bi-three-dots-vertical"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settingsTab" style="height: 100%; overflow-y: auto;">
+          <div class="settings-section">
+            <div class="settings-title">Editor Settings</div>
+            <div class="settings-option">
+              <div class="settings-label">Theme</div>
+              <select class="settings-select" id="editorTheme">
+                <option value="dracula">Dracula</option>
+                <option value="eclipse">Eclipse</option>
+                <option value="monokai">Monokai</option>
+                <option value="github">GitHub</option>
+                <option value="material">Material</option>
+                <option value="nord">Nord</option>
+                <option value="oceanic-next">Oceanic Next</option>
+                <option value="solarized">Solarized</option>
+              </select>
+            </div>
+            <div class="settings-option">
+              <div class="settings-label">Font Size</div>
+              <select class="settings-select" id="fontSize">
+                <option value="12">12px</option>
+                <option value="14" selected>14px</option>
+                <option value="16">16px</option>
+                <option value="18">18px</option>
+              </select>
+            </div>
+            <div class="settings-option">
+              <div class="settings-label">Tab Size</div>
+              <select class="settings-select" id="tabSize">
+                <option value="2" selected>2 spaces</option>
+                <option value="4">4 spaces</option>
+                <option value="8">8 spaces</option>
+              </select>
+            </div>
+            <div class="settings-option">
+              <div class="settings-label">Auto-complete</div>
+              <label class="settings-toggle">
+                <input type="checkbox" checked id="autoComplete">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-option">
+              <div class="settings-label">Line Numbers</div>
+              <label class="settings-toggle">
+                <input type="checkbox" checked id="lineNumbers">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-title">Room Settings</div>
+            <div class="settings-option">
+              <div class="settings-label">Notifications</div>
+              <label class="settings-toggle">
+                <input type="checkbox" checked id="notifications">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-option">
+              <div class="settings-label">Sound Effects</div>
+              <label class="settings-toggle">
+                <input type="checkbox" checked id="soundEffects">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-option">
+              <div class="settings-label">Show Cursor Names</div>
+              <label class="settings-toggle">
+                <input type="checkbox" checked id="cursorNames">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New File Modal -->
+  <div class="modal fade" id="newFileModal" tabindex="-1" aria-labelledby="newFileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="newFileModalLabel">Add New File</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label for="fileName" class="form-label">File Name</label>
+              <input type="text" class="form-control" id="fileName" placeholder="Enter file name with extension">
+            </div>
+            <div class="mb-3">
+              <label for="fileType" class="form-label">File Type</label>
+              <select class="form-select" id="fileType">
+                <option value="js">JavaScript (.js)</option>
+                <option value="html">HTML (.html)</option>
+                <option value="css">CSS (.css)</option>
+                <option value="json">JSON (.json)</option>
+                <option value="txt">Text (.txt)</option>
+                <option value="md">Markdown (.md)</option>
+                <option value="py">Python (.py)</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="createFileBtn">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Room Modal -->
+  <div class="modal fade" id="shareRoomModal" tabindex="-1" aria-labelledby="shareRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="shareRoomModalLabel">Share Room</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="roomLink" class="form-label">Room Link</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="roomLink" value="https://codecollab.io/room/frontend-project-123" readonly>
+              <button class="btn btn-outline-primary" type="button" id="copyLinkBtn">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Invite by Email</label>
+            <div class="input-group">
+              <input type="email" class="form-control" id="inviteEmail" placeholder="Enter email address">
+              <button class="btn btn-primary" type="button" id="sendInviteBtn">
+                Invite
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/hint/javascript-hint.min.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Initialize chat scroll position
+      setTimeout(function() {
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+
+          // Add resize event listener to handle scroll on window resize
+          window.addEventListener('resize', function() {
+            setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 100);
+          });
+
+          // Handle orientation change on mobile devices
+          window.addEventListener('orientationchange', function() {
+            setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 200);
+          });
+
+          // On mobile - fix for iOS momentum scrolling issues
+          chatMessages.addEventListener('touchend', function() {
+            if ((chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight) < 50) {
+              setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 50);
+            }
+          });
+        }
+      }, 200);
+      // Connect to Socket.IO
+      const socket = io();
+
+      // Get room ID from URL
+      const roomId = window.location.pathname.split('/').pop();
+
+      // Get user data
+      const userId = '<%= user?.googleId || user?._id || "anonymous-" + Math.random().toString(36).substring(2, 8) %>';
+      const username = '<%= user?.fullname || "Anonymous User" %>';
+      const userPicture = '<%= user?.picture || "https://randomuser.me/api/portraits/men/32.jpg" %>';
+
+      // Keep track of other users
+      const activeUsers = new Map();
+      const userCursors = new Map();
+
+      // Join the room
+      socket.emit("join_room", {
+        roomId,
+        userId,
+        username,
+        picture: userPicture
+      });
+
+      // Update online users count
+      function updateOnlineCount(count) {
+        document.querySelector('.online-count').textContent = count;
+      }
+
+      // Add system message to chat
+      function addSystemMessage(message) {
+        const systemMessage = document.createElement('div');
+        systemMessage.className = 'system-message';
+        systemMessage.innerHTML = `<div class="chat-text">${message}</div>`;
+        chatMessages.appendChild(systemMessage);
+
+        // Force scroll to bottom for system messages - using multiple techniques for better reliability
+        requestAnimationFrame(() => {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+
+          // Double-check scroll position after DOM has updated
+          setTimeout(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Final check after any potential reflows/layouts
+            setTimeout(() => {
+              // Force layout recalculation on problematic browsers
+              void chatMessages.offsetHeight;
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 200);
+          }, 100);
+        });
+      }
+
+      // Initialize CodeMirror editor
+      const codeEditor = CodeMirror(document.getElementById("codeEditor"), {
+        mode: "javascript",
+        theme: "dracula",
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        indentUnit: 2,
+        tabSize: 2,
+        lineWrapping: true,
+        scrollbarStyle: "native",
+        viewportMargin: Infinity,
+        extraKeys: {"Ctrl-Space": "autocomplete"}
+      });
+
+      // Set initial content based on language
+      let initialCode = '';
+
+      switch('<%= roomData.language %>'.toLowerCase()) {
+        case 'javascript':
+          initialCode = `// Welcome to <%= roomData.name %>!
+// <%= roomData.description || 'Start coding here...' %>
+
+function authenticate(username, password) {
+  // TODO: Implement JWT authentication
+  return fetch('/api/auth', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ username, password })
+  })
+  .then(response => response.json())
+  .then(data => {
+    localStorage.setItem('token', data.token);
+    return data;
+  });
+}
+
+// Example usage
+document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+
+  authenticate(username, password)
+    .then(data => {
+      console.log('Authentication successful!', data);
+    })
+    .catch(err => {
+      console.error('Authentication failed:', err);
+    });
+});`;
+          break;
+        case 'python':
+          initialCode = `# Welcome to <%= roomData.name %>!
+# <%= roomData.description || 'Start coding here...' %>
+
+import requests
+import json
+
+def authenticate(username, password):
+    """Authenticate a user and return token"""
+    response = requests.post(
+        '/api/auth',
+        headers={'Content-Type': 'application/json'},
+        data=json.dumps({'username': username, 'password': password})
+    )
+    data = response.json()
+    return data
+
+# Example usage
+if __name__ == "__main__":
+    username = input("Username: ")
+    password = input("Password: ")
+
+    try:
+        result = authenticate(username, password)
+        print("Authentication successful!", result)
+    except Exception as e:
+        print("Authentication failed:", str(e))`;
+          break;
+        default:
+          initialCode = `// Welcome to <%= roomData.name %>!
+// <%= roomData.description || 'Start coding here...' %>
+
+// Room ID: <%= roomData.id %>
+// Language: <%= roomData.language %>
+// Created at: <%= roomData.createdAt %>
+
+// Start collaborating with your team!`;
+      }
+
+      codeEditor.setValue(initialCode);
+
+      // Emit initial code to the room
+      socket.emit("code_change", {
+        roomId,
+        code: initialCode,
+        language: '<%= roomData.language %>',
+        userId
+      });
+
+      // Listen for code changes from other users
+      socket.on("code_updated", (data) => {
+        if (data.userId !== userId) {
+          // Save current cursor position
+          const cursor = codeEditor.getCursor();
+
+          // Update code without triggering change event
+          codeEditor.off("change", handleEditorChanges);
+          codeEditor.setValue(data.code);
+          codeEditor.setCursor(cursor);
+          codeEditor.on("change", handleEditorChanges);
+
+          // If cursor position is provided, show the other user's cursor
+          if (data.cursorPosition) {
+            updateUserCursor(data.userId, data.cursorPosition);
+          }
+        }
+      });
+
+      // Handle editor changes
+      function handleEditorChanges(editor, changes) {
+        const code = editor.getValue();
+        const cursor = editor.getCursor();
+
+        // Emit code changes to server
+        socket.emit("code_change", {
+          roomId,
+          code,
+          language: '<%= roomData.language %>',
+          userId,
+          cursorPosition: {
+            line: cursor.line,
+            ch: cursor.ch
+          }
+        });
+      }
+
+      // Add change listener
+      codeEditor.on("change", handleEditorChanges);
+
+      // Add cursor movement listener
+      codeEditor.on("cursorActivity", function(editor) {
+        if (!editor.state.focused) return;
+
+        const cursor = editor.getCursor();
+        socket.emit("cursor_move", {
+          roomId,
+          userId,
+          username,
+          cursorPosition: {
+            line: cursor.line,
+            ch: cursor.ch
+          }
+        });
+      });
+
+      // Listen for cursor updates from other users
+      socket.on("cursor_updated", (data) => {
+        if (data.userId !== userId) {
+          updateUserCursor(data.userId, data.cursorPosition, data.username);
+        }
+      });
+
+      // Update or create user cursor indicator
+      function updateUserCursor(userId, position, username) {
+        let cursorElement = userCursors.get(userId);
+
+        if (!cursorElement) {
+          // Create new cursor element
+          cursorElement = document.createElement("div");
+          cursorElement.className = "cm-user-cursor";
+          cursorElement.dataset.user = username || "User";
+
+          // Assign random color for this user
+          const colors = ["#ff3b30", "#4cd964", "#5ac8fa", "#ffcc00", "#ff9500"];
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          cursorElement.style.backgroundColor = color;
+
+          document.querySelector(".CodeMirror").appendChild(cursorElement);
+          userCursors.set(userId, cursorElement);
+        }
+
+        // Update cursor position
+        const coords = codeEditor.charCoords({line: position.line, ch: position.ch}, "local");
+        cursorElement.style.left = `${coords.left}px`;
+        cursorElement.style.top = `${coords.top}px`;
+      }
+
+      // Toggle terminal visibility
+      const toggleTerminalBtn = document.getElementById("toggleTerminalBtn");
+      const terminalContainer = document.getElementById("terminalContainer");
+      const closeTerminalBtn = document.getElementById("closeTerminalBtn");
+
+      toggleTerminalBtn.addEventListener("click", () => {
+        terminalContainer.style.display = terminalContainer.style.display === "none" ? "flex" : "none";
+        if (terminalContainer.style.display === "flex") {
+          document.getElementById("terminalInput").focus();
+        }
+      });
+
+      closeTerminalBtn.addEventListener("click", () => {
+        terminalContainer.style.display = "none";
+      });
+
+      // Terminal input handling
+      const terminalInput = document.getElementById("terminalInput");
+      const terminalContent = document.getElementById("terminalContent");
+
+      terminalInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const command = terminalInput.value.trim();
+
+          // Add command to terminal
+          const commandLine = document.createElement("div");
+          commandLine.className = "terminal-line";
+          commandLine.innerHTML = `<span class="terminal-prompt">$</span><span class="terminal-output">${command}</span>`;
+          terminalContent.insertBefore(commandLine, document.querySelector(".terminal-input-line"));
+
+          // Process command (mock response)
+          let response;
+          if (command === "help") {
+            response = `Available commands:
+- help: Show this help message
+- clear: Clear terminal
+- run: Run current code
+- npm install: Install dependencies
+- git status: Show git status`;
+          } else if (command === "clear") {
+            Array.from(terminalContent.children).forEach(child => {
+              if (!child.classList.contains("terminal-input-line")) {
+                child.remove();
+              }
+            });
+            terminalInput.value = "";
+            return;
+          } else if (command === "run") {
+            response = "Running code...\nServer started at http://localhost:3000";
+          } else if (command.startsWith("npm")) {
+            response = "Installing packages...\nAdded 125 packages in 3.5s";
+          } else if (command.startsWith("git")) {
+            response = "On branch main\nYour branch is up to date with 'origin/main'.\n\nChanges not staged for commit:\n  modified: index.js";
+          } else {
+            response = `Command not found: ${command}`;
+          }
+
+          // Add response to terminal
+          const responseLine = document.createElement("div");
+          responseLine.className = "terminal-line";
+          responseLine.innerHTML = `<span class="terminal-prompt"></span><span class="terminal-output">${response}</span>`;
+          terminalContent.insertBefore(responseLine, document.querySelector(".terminal-input-line"));
+
+          // Clear input and scroll to bottom
+          terminalInput.value = "";
+          terminalContent.scrollTop = terminalContent.scrollHeight;
+        }
+      });
+
+      // Toggle sidebar
+      const toggleSidebarBtn = document.getElementById("toggleSidebarBtn");
+      const roomSidebar = document.getElementById("roomSidebar");
+
+      toggleSidebarBtn.addEventListener("click", () => {
+        roomSidebar.classList.toggle("collapsed");
+      });
+
+      // Sidebar tab switching
+      const sidebarTabs = document.querySelectorAll(".sidebar-tab");
+      const tabContents = document.querySelectorAll(".tab-content");
+
+      // Helper function to scroll chat to bottom - more robust implementation
+      function scrollChatToBottom() {
+        requestAnimationFrame(() => {
+          // Get scroll info before attempting to scroll
+          const scrollHeight = chatMessages.scrollHeight;
+
+          // Attempt scroll
+          chatMessages.scrollTop = scrollHeight;
+
+          // Secondary check with slight delay to ensure scrolling after DOM updates
+          setTimeout(() => {
+            // Force layout recalculation for problematic mobile browsers
+            void chatMessages.offsetHeight;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          }, 50);
+        });
+      }
+
+      sidebarTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+          // Remove active class from all tabs and contents
+          sidebarTabs.forEach(t => t.classList.remove("active"));
+          tabContents.forEach(c => c.classList.remove("active"));
+
+          // Add active class to clicked tab and corresponding content
+          tab.classList.add("active");
+          const tabName = tab.getAttribute("data-tab");
+          document.getElementById(tabName + "Tab").classList.add("active");
+
+          // If switching to chat tab, scroll to bottom after a short delay
+          if (tabName === "chat") {
+            setTimeout(() => {
+              scrollChatToBottom();
+              // Double check scroll position
+              setTimeout(scrollChatToBottom, 100);
+            }, 50);
+          }
+        });
+      });
+
+      // Handling chat input
+      const chatInput = document.getElementById("chatInput");
+      const sendChatBtn = document.getElementById("sendChatBtn");
+      const chatMessages = document.getElementById("chatMessages");
+
+      function sendChatMessage() {
+        const messageText = chatInput.value.trim();
+        if (messageText) {
+          const currentTime = new Date();
+          const timeString = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          // Send message to server
+          socket.emit("send_message", {
+            roomId,
+            userId,
+            username,
+            picture: userPicture,
+            message: messageText,
+            timestamp: currentTime.toISOString()
+          });
+
+          // Clear input
+          chatInput.value = "";
+        }
+      }
+
+      function sendMessage() {
+        sendChatMessage();
+      }
+
+      sendChatBtn.addEventListener("click", sendMessage);
+      chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          sendMessage();
+        }
+      });
+
+      // Listen for new messages
+      socket.on("new_message", (data) => {
+        const currentTime = new Date(data.timestamp);
+        const timeString = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const isOwnMessage = data.userId === userId;
+        const messageHTML = `
+          <div class="chat-message ${isOwnMessage ? 'own' : ''}">
+            <div class="chat-avatar">
+              <img src="${data.picture}" alt="User">
+            </div>
+            <div class="chat-content">
+              <div class="chat-header">
+                <div class="chat-username">${isOwnMessage ? 'You' : data.username}</div>
+                <div class="chat-time">${timeString}</div>
+              </div>
+              <div class="chat-text">
+                ${data.message}
+              </div>
+            </div>
+          </div>
+        `;
+
+        chatMessages.insertAdjacentHTML('beforeend', messageHTML);
+
+        // Improved handling of scrolling for new messages
+        requestAnimationFrame(() => {
+          // Get current scroll position before DOM updates
+          const currentScroll = chatMessages.scrollTop;
+          const clientHeight = chatMessages.clientHeight;
+          const scrollHeight = chatMessages.scrollHeight;
+
+          // Check if user is already at the bottom or close to it (within 150px)
+          const isNearBottom = (scrollHeight - currentScroll - clientHeight) < 150;
+
+          // Only auto-scroll if already near the bottom to avoid disrupting reading
+          if (isNearBottom) {
+            chatMessages.scrollTop = scrollHeight;
+
+            // Double-check scroll position after rendering
+            setTimeout(() => {
+              // Force browser to recalculate layout
+              void chatMessages.offsetHeight;
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+          } else {
+            // If not at bottom, show a "new message" indicator (you could add this UI element)
+            // This is optional - add UI for "scroll to bottom" button when needed
+          }
+        });
+      });
+
+      // Theme switching
+      document.getElementById("editorTheme").addEventListener("change", (e) => {
+        const theme = e.target.value;
+
+        // Load theme CSS if not already loaded
+        if (!document.getElementById(`theme-${theme}`)) {
+          const link = document.createElement('link');
+          link.id = `theme-${theme}`;
+          link.rel = 'stylesheet';
+          link.href = `https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/${theme}.min.css`;
+          document.head.appendChild(link);
+        }
+
+        // Set theme after a short delay to ensure CSS is loaded
+        setTimeout(() => {
+          codeEditor.setOption("theme", theme);
+        }, 100);
+      });
+
+      // Font size changing
+      document.getElementById("fontSize").addEventListener("change", (e) => {
+        const fontSize = e.target.value;
+        document.querySelector(".CodeMirror").style.fontSize = `${fontSize}px`;
+      });
+
+      // Tab size changing
+      document.getElementById("tabSize").addEventListener("change", (e) => {
+        const tabSize = parseInt(e.target.value);
+        codeEditor.setOption("tabSize", tabSize);
+        codeEditor.setOption("indentUnit", tabSize);
+      });
+
+      // Simulate multiple users' cursors (for demo purposes)
+      function addUserCursor(user, line, ch, color) {
+        const cursorEl = document.createElement("div");
+        cursorEl.className = "cm-user-cursor";
+        cursorEl.style.backgroundColor = color;
+        cursorEl.setAttribute("data-user", user);
+
+        const coords = codeEditor.charCoords({line, ch}, "local");
+        cursorEl.style.left = `${coords.left}px`;
+        cursorEl.style.top = `${coords.top}px`;
+
+        document.querySelector(".CodeMirror").appendChild(cursorEl);
+
+        // Animate cursor to simulate typing
+        setTimeout(() => {
+          const newCoords = codeEditor.charCoords({line, ch: ch + 5}, "local");
+          cursorEl.style.left = `${newCoords.left}px`;
+        }, 2000);
+      }
+
+      // Socket.IO user joined/left events
+      socket.on("user_joined", (data) => {
+        if (data.userId !== userId) {
+          addSystemMessage(`${data.username} joined the room`);
+          updateOnlineCount(data.userCount);
+
+          // Add user to active users list
+          activeUsers.set(data.socketId, data);
+          updateParticipantsList();
+        }
+      });
+
+      socket.on("user_left", (data) => {
+        addSystemMessage(`${data.username} left the room`);
+        updateOnlineCount(data.userCount);
+
+        // Remove user's cursor if it exists
+        if (userCursors.has(data.userId)) {
+          const cursorEl = userCursors.get(data.userId);
+          if (cursorEl && cursorEl.parentNode) {
+            cursorEl.parentNode.removeChild(cursorEl);
+          }
+          userCursors.delete(data.userId);
+        }
+
+        // Remove from active users
+        for (const [socketId, userData] of activeUsers.entries()) {
+          if (userData.userId === data.userId) {
+            activeUsers.delete(socketId);
+            break;
+          }
+        }
+
+        updateParticipantsList();
+      });
+
+      socket.on("room_users", (usersList) => {
+        // Clear existing users
+        activeUsers.clear();
+
+        // Add all users
+        usersList.forEach(user => {
+          if (user.userId !== userId) {
+            activeUsers.set(user.socketId, user);
+          }
+        });
+
+        updateOnlineCount(usersList.length);
+        updateParticipantsList();
+      });
+
+      // Update participants list in sidebar
+      function updateParticipantsList() {
+        const participantsList = document.querySelector('#participantsTab .participant-list');
+        if (!participantsList) return;
+
+        // Clear existing list except current user
+        while (participantsList.children.length > 1) {
+          participantsList.removeChild(participantsList.lastChild);
+        }
+
+        // Add active users
+        activeUsers.forEach(user => {
+          const participantItem = document.createElement('div');
+          participantItem.className = 'participant-item';
+          participantItem.innerHTML = `
+            <div class="participant-avatar online">
+              <img src="${user.picture}" alt="${user.username}">
+            </div>
+            <div class="participant-info">
+              <div class="participant-name">${user.username}</div>
+              <div class="participant-status">Active now</div>
+            </div>
+            <div class="participant-actions">
+              <i class="bi bi-three-dots-vertical"></i>
+            </div>
+          `;
+          participantsList.appendChild(participantItem);
+        });
+      }
+
+      // Handle "Run" button click
+      document.getElementById("runCodeBtn").addEventListener("click", () => {
+        terminalContainer.style.display = "flex";
+
+        // Add command to terminal
+        const commandLine = document.createElement("div");
+        commandLine.className = "terminal-line";
+        commandLine.innerHTML = `<span class="terminal-prompt">$</span><span class="terminal-output">npm run start</span>`;
+        terminalContent.insertBefore(commandLine, document.querySelector(".terminal-input-line"));
+
+        // Add simulated output
+        const outputLines = [
+          "Starting development server...",
+          "Compiled successfully!",
+          "",
+          "You can now view your app in the browser:",
+          "",
+          "  Local:            http://localhost:3000",
+          "  On Your Network:  http://192.168.1.5:3000",
+          "",
+          "Note that the development build is not optimized.",
+          "To create a production build, use npm run build."
+        ];
+
+        let lineIndex = 0;
+        const interval = setInterval(() => {
+          if (lineIndex < outputLines.length) {
+            const responseLine = document.createElement("div");
+            responseLine.className = "terminal-line";
+            responseLine.innerHTML = `<span class="terminal-prompt"></span><span class="terminal-output">${outputLines[lineIndex]}</span>`;
+            terminalContent.insertBefore(responseLine, document.querySelector(".terminal-input-line"));
+            terminalContent.scrollTop = terminalContent.scrollHeight;
+            lineIndex++;
+          } else {
+            clearInterval(interval);
+          }
+        }, 200);
+      });
+
+      // Handle Save button click
+      document.getElementById("saveCodeBtn").addEventListener("click", () => {
+        // Add a quick visual feedback
+        const saveBtn = document.getElementById("saveCodeBtn");
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="bi bi-check"></i> Saved';
+
+        setTimeout(() => {
+          saveBtn.innerHTML = originalText;
+        }, 2000);
+
+        // In a real implementation, this would send the code to the server
+        console.log("Saving code:", codeEditor.getValue());
+      });
+    });
+  </script>
+</body>
+</html>
