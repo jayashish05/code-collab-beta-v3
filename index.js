@@ -369,24 +369,7 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(
-  "/js",
-  express.static(path.join(__dirname, "public/js"), { maxAge: 0 }),
-);
 
-// Log static file serving details for debugging in Vercel
-app.use((req, res, next) => {
-  if (
-    req.url.startsWith("/css") ||
-    req.url.startsWith("/js") ||
-    req.url.startsWith("/img")
-  ) {
-    console.log(
-      `[STATIC] Serving: ${req.url}, Full path: ${path.join(__dirname, "public", req.url)}`,
-    );
-  }
-  next();
-});
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json()); // For JSON requests
 
