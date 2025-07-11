@@ -542,15 +542,15 @@ app.get("/room/:roomId", (req, res) => {
 });
 
 app.get("/auth/signin", (req, res) => {
-  res.render("signin.ejs", { title: "Sign In" });
+  res.render("inline-signin.ejs", { title: "Sign In" });
 });
 
 app.get("/auth/signup", (req, res) => {
-  res.render("signup.ejs", { title: "Sign Up" });
+  res.render("inline-signup.ejs", { title: "Sign Up" });
 });
 
 app.get("/auth/forgot-password", (req, res) => {
-  res.render("forgot-password.ejs", { title: "Forgot Password" });
+  res.render("inline-forgot-password.ejs", { title: "Forgot Password" });
 });
 
 // Google OAuth routes
