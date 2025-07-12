@@ -1,5 +1,5 @@
 import express from "express";
-import { collection } from "./config.js";
+import { collection, safeDBOperation } from "./config.js";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -137,16 +137,16 @@ passport.deserializeUser(async (id, done) => {
   try {
     console.log("Deserializing user ID:", id);
 
-    // Ensure database connection is available
-    if (!collection) {
-      console.error("Database collection not available during deserialization");
-      return done(new Error("Database connection unavailable"), null);
-    }
-
+    // Use safe database operation with retry logic
+    let user = null;
+    
     // Check if the ID looks like an email
     if (id.includes("@")) {
       // Try to find by email first
-      const user = await collection.findOne({ email: id });
+      user = await safeDBOperation(async () => {
+        return await collection.findOne({ email: id });
+      });
+      
       if (user) {
         console.log("User found by email:", user.email);
         return done(null, user);
@@ -155,23 +155,33 @@ passport.deserializeUser(async (id, done) => {
 
     // If not found by email or not an email, try other identifiers
     // Try to find by googleId
-    const googleUser = await collection.findOne({ googleId: id });
-    if (googleUser) {
-      console.log("User found by googleId:", googleUser.email);
-      return done(null, googleUser);
+    if (!user) {
+      user = await safeDBOperation(async () => {
+        return await collection.findOne({ googleId: id });
+      });
+      
+      if (user) {
+        console.log("User found by googleId:", user.email);
+        return done(null, user);
+      }
     }
 
     // Try to find by _id as last resort
-    try {
-      if (/^[0-9a-fA-F]{24}$/.test(id)) {
-        const userById = await collection.findOne({ _id: id });
-        if (userById) {
-          console.log("User found by _id:", userById.email);
-          return done(null, userById);
+    if (!user) {
+      try {
+        if (/^[0-9a-fA-F]{24}$/.test(id)) {
+          user = await safeDBOperation(async () => {
+            return await collection.findOne({ _id: id });
+          });
+          
+          if (user) {
+            console.log("User found by _id:", user.email);
+            return done(null, user);
+          }
         }
+      } catch (err) {
+        console.log("Error looking up by _id:", err.message);
       }
-    } catch (err) {
-      console.log("Error looking up by _id:", err.message);
     }
 
     console.log("User not found during deserialization for ID:", id);
@@ -182,8 +192,9 @@ passport.deserializeUser(async (id, done) => {
     
     // In serverless environments, database connections might be intermittent
     // Return false instead of error to prevent authentication loops
-    if (err.name === 'MongoNetworkError' || err.name === 'MongoTimeoutError') {
-      console.error("Database connection issue during deserialization, returning false");
+    if (err.message.includes('timeout') || err.message.includes('buffering') || 
+        err.name === 'MongoNetworkError' || err.name === 'MongoTimeoutError') {
+      console.error("Database connection/timeout issue during deserialization, returning false");
       return done(null, false);
     }
     
@@ -202,16 +213,12 @@ passport.use(
       try {
         console.log(`Attempting to authenticate user with email: ${email}`);
 
-        // Ensure database connection is available
-        if (!collection) {
-          console.error("Database collection not available during authentication");
-          return done(new Error("Database connection unavailable"), null);
-        }
-
-        // Look for users by email (both local and legacy users without authType)
-        const user = await collection.findOne({
-          email: email,
-          $or: [{ authType: "local" }, { authType: { $exists: false } }],
+        // Use safe database operation with retry logic
+        const user = await safeDBOperation(async () => {
+          return await collection.findOne({
+            email: email,
+            $or: [{ authType: "local" }, { authType: { $exists: false } }],
+          });
         });
 
         if (!user) {
@@ -231,9 +238,10 @@ passport.use(
         console.error(`Authentication error stack: ${err.stack}`);
         
         // Handle specific database errors in serverless environments
-        if (err.name === 'MongoNetworkError' || err.name === 'MongoTimeoutError') {
-          console.error("Database connection issue during authentication");
-          return done(new Error("Database connection temporarily unavailable. Please try again."), null);
+        if (err.message.includes('timeout') || err.message.includes('buffering') || 
+            err.name === 'MongoNetworkError' || err.name === 'MongoTimeoutError') {
+          console.error("Database connection/timeout issue during authentication");
+          return done(null, false, { message: "Database connection temporarily unavailable. Please try again." });
         }
         
         return done(err);
@@ -265,7 +273,10 @@ passport.use(
           return cb(new Error("Invalid Google profile data"), null);
         }
 
-        let user = await collection.findOne({ googleId: profile.id });
+        // Use safe database operation to find user by Google ID
+        let user = await safeDBOperation(async () => {
+          return await collection.findOne({ googleId: profile.id });
+        });
 
         // Create user object with necessary profile data
         const userData = {
@@ -282,7 +293,11 @@ passport.use(
           // Insert new user
           console.log("Creating new user from Google profile");
           try {
-            const result = await collection.insertOne(userData);
+            // Use safe database operation for user creation
+            const result = await safeDBOperation(async () => {
+              return await collection.insertOne(userData);
+            });
+            
             console.log("User created:", result.insertedId);
             // Make sure we have the _id field for consistency
             userData._id = result.insertedId;
@@ -292,23 +307,29 @@ passport.use(
             console.error("Error creating user:", insertError);
             // Check if this was a duplicate key error (maybe email already exists)
             if (insertError.code === 11000) {
-              // Try to find by email
-              const existingUser = await collection.findOne({
-                email: userData.email,
+              // Try to find by email using safe operation
+              const existingUser = await safeDBOperation(async () => {
+                return await collection.findOne({
+                  email: userData.email,
+                });
               });
+              
               if (existingUser) {
-                // Update this user with Google info
-                const updateResult = await collection.updateOne(
-                  { email: userData.email },
-                  {
-                    $set: {
-                      googleId: userData.googleId,
-                      picture: userData.picture,
-                      accessToken: userData.accessToken,
-                      lastLogin: new Date(),
+                // Update this user with Google info using safe operation
+                const updateResult = await safeDBOperation(async () => {
+                  return await collection.updateOne(
+                    { email: userData.email },
+                    {
+                      $set: {
+                        googleId: userData.googleId,
+                        picture: userData.picture,
+                        accessToken: userData.accessToken,
+                        lastLogin: new Date(),
+                      },
                     },
-                  },
-                );
+                  );
+                });
+                
                 console.log(
                   "Linked existing account with Google:",
                   updateResult.modifiedCount,
@@ -322,19 +343,25 @@ passport.use(
           // Update existing user
           console.log("Updating existing user from Google profile");
           try {
-            const result = await collection.updateOne(
-              { googleId: profile.id },
-              {
-                $set: {
-                  ...userData,
-                  lastLogin: new Date(),
+            // Use safe database operation for updating user
+            const result = await safeDBOperation(async () => {
+              return await collection.updateOne(
+                { googleId: profile.id },
+                {
+                  $set: {
+                    ...userData,
+                    lastLogin: new Date(),
+                  },
                 },
-              },
-            );
+              );
+            });
+            
             console.log("User updated:", result.modifiedCount);
-            // Get the updated user to ensure we have all fields
-            const updatedUser = await collection.findOne({
-              googleId: profile.id,
+            // Get the updated user to ensure we have all fields using safe operation
+            const updatedUser = await safeDBOperation(async () => {
+              return await collection.findOne({
+                googleId: profile.id,
+              });
             });
             return cb(null, updatedUser || userData);
           } catch (updateError) {
@@ -778,8 +805,14 @@ app.post("/auth/signup", async (req, res) => {
       });
     }
 
-    const namecheck = await collection.findOne({ fullname: data.fullname });
-    const emailcheck = await collection.findOne({ email: data.email });
+    // Use safe database operations for user checks
+    const namecheck = await safeDBOperation(async () => {
+      return await collection.findOne({ fullname: data.fullname });
+    });
+    
+    const emailcheck = await safeDBOperation(async () => {
+      return await collection.findOne({ email: data.email });
+    });
 
     if (namecheck && emailcheck) {
       return res.render("signup.ejs", {
@@ -804,7 +837,11 @@ app.post("/auth/signup", async (req, res) => {
         // Remove confirmPassword before storing in database
         delete data.confirmPassword;
 
-        const result = await collection.insertOne(data);
+        // Use safe database operation for user creation
+        const result = await safeDBOperation(async () => {
+          return await collection.insertOne(data);
+        });
+        
         console.log("User created:", data.email);
 
         // Log the user in automatically
