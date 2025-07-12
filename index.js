@@ -1,5 +1,5 @@
 import express from "express";
-import { collection, safeDBOperation } from "./config.js";
+import { collection, safeDBOperation, ensureDBConnection, connectDB } from "./config.js";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -37,6 +37,17 @@ console.log('CLIENT_ID:', process.env.CLIENT_ID ? 'Set' : 'Not set');
 console.log('CLIENT_GOOGLE_SECRET:', process.env.CLIENT_GOOGLE_SECRET ? 'Set' : 'Not set');
 
 dotenv.config();
+
+// Initialize database connection
+console.log('Initializing database connection...');
+connectDB()
+  .then(() => {
+    console.log('Database connection initialized successfully');
+  })
+  .catch((error) => {
+    console.error('Failed to initialize database connection:', error);
+    console.error('The application will continue but database operations may fail');
+  });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -106,8 +117,9 @@ app.use(
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Dynamic based on environment
+      secure: process.env.NODE_ENV === "production" && process.env.VERCEL_ENV, // Only secure in production AND on Vercel
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for production
+      domain: process.env.NODE_ENV === "production" ? undefined : undefined, // Let browser handle domain
     },
     name: "codecollab.sid", // Custom session name
     // Memory store is fine for development
@@ -258,7 +270,10 @@ passport.use(
       clientID: process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
       clientSecret:
         process.env.CLIENT_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:3002/auth/google/callback",
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || 
+        (process.env.NODE_ENV === "production" ? 
+          "https://your-app-name.vercel.app/auth/google/callback" : 
+          "http://localhost:3002/auth/google/callback"),
       userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
       passReqToCallback: true,
       proxy: true, // Important for working with proxied connections
@@ -967,7 +982,7 @@ app.post("/auth/signin", async (req, res, next) => {
 // Simple signup route that keeps users on the signup page
 
 // Auth debug page to troubleshoot authentication issues
-app.get("/auth/debug", (req, res) => {
+app.get("/auth/debug", async (req, res) => {
   // Allow debug in both development and production for troubleshooting
   // Comment out the production check temporarily for Vercel debugging
   // const isProduction = process.env.NODE_ENV === "production";
@@ -975,13 +990,39 @@ app.get("/auth/debug", (req, res) => {
   //   return res.redirect("/");
   // }
 
+  // Check database connection status
+  let databaseStatus = 'Unknown';
+  let connectionDetails = {};
+  
+  try {
+    // Import mongoose to check connection state
+    const mongoose = await import('mongoose');
+    connectionDetails = {
+      readyState: mongoose.default.connection.readyState,
+      readyStateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.default.connection.readyState] || 'unknown',
+      host: mongoose.default.connection.host,
+      name: mongoose.default.connection.name,
+    };
+    
+    if (mongoose.default.connection.readyState === 1) {
+      databaseStatus = 'Connected';
+    } else if (mongoose.default.connection.readyState === 2) {
+      databaseStatus = 'Connecting';
+    } else {
+      databaseStatus = 'Disconnected';
+    }
+  } catch (error) {
+    databaseStatus = 'Error: ' + error.message;
+  }
+
   const debugInfo = {
     isAuthenticated: req.isAuthenticated(),
     sessionID: req.sessionID,
     session: req.session,
     environment: process.env.NODE_ENV,
     vercelEnv: process.env.VERCEL_ENV,
-    databaseStatus: collection ? 'Connected' : 'Disconnected',
+    databaseStatus: databaseStatus,
+    connectionDetails: connectionDetails,
     user: req.user
       ? {
           email: req.user.email,
