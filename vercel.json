@@ -1,13 +1,13 @@
 {
   "version": 2,
   "functions": {
-    "index.js": {
+    "api/index.js": {
       "maxDuration": 30
     }
   },
   "builds": [
     {
-      "src": "index.js",
+      "src": "api/index.js",
       "use": "@vercel/node"
     },
     {
@@ -78,11 +78,11 @@
     },
     {
       "src": "/api/(.*)",
-      "dest": "/index.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.js"
+      "dest": "/api/index.js"
     }
   ]
 }

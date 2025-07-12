@@ -106,24 +106,32 @@ const bashQueue = [];
 // Flag to indicate if we're currently processing a bash command
 let processingBash = false;
 
-// Configure session
+// Configure session with proper settings for both localhost and Vercel
+const isProduction = process.env.NODE_ENV === "production";
+const isVercel = process.env.VERCEL_ENV !== undefined;
+
+// Enhanced session configuration for serverless and localhost
 app.use(
   session({
-    secret:
-      process.env.SESSION_SECRET ||
-      "codecollab_dev_secret_replace_in_production",
-    resave: false, // Changed to false for serverless environments
-    saveUninitialized: false, // Changed to false for serverless environments
+    secret: process.env.SESSION_SECRET || "codecollab_dev_secret_replace_in_production_12345",
+    resave: false,
+    saveUninitialized: false,
+    rolling: true, // Reset expiration on activity
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production" && process.env.VERCEL_ENV, // Only secure in production AND on Vercel
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for production
-      domain: process.env.NODE_ENV === "production" ? undefined : undefined, // Let browser handle domain
+      secure: isProduction || (process.env.HTTPS === "true"), // HTTPS in production or when explicitly set
+      sameSite: isProduction ? "lax" : "lax", // Use lax for better compatibility
+      domain: undefined, // Let browser handle domain automatically
+      path: "/", // Ensure cookies work for all paths
     },
-    name: "codecollab.sid", // Custom session name
-    // Memory store is fine for development
-    // For production, consider using a database or Redis store
+    name: "codecollab.sid",
+    // Add session debugging
+    genid: function(req) {
+      const sessionId = require('crypto').randomBytes(16).toString('hex');
+      console.log("Generating new session ID:", sessionId);
+      return sessionId;
+    }
   }),
 );
 
@@ -263,6 +271,15 @@ passport.use(
 );
 
 // Configure Google Strategy
+const googleCallbackURL = process.env.GOOGLE_CALLBACK_URL || 
+  (process.env.VERCEL_URL ? 
+    `https://${process.env.VERCEL_URL}/auth/google/callback` : 
+    (process.env.NODE_ENV === "production" ? 
+      "https://code-collab-beta-v3.vercel.app/auth/google/callback" : 
+      "http://localhost:3002/auth/google/callback"));
+
+console.log("Google OAuth Callback URL:", googleCallbackURL);
+
 passport.use(
   "google",
   new GoogleStrategy(
@@ -270,10 +287,7 @@ passport.use(
       clientID: process.env.CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
       clientSecret:
         process.env.CLIENT_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || 
-        (process.env.NODE_ENV === "production" ? 
-          "https://your-app-name.vercel.app/auth/google/callback" : 
-          "http://localhost:3002/auth/google/callback"),
+      callbackURL: googleCallbackURL,
       userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
       passReqToCallback: true,
       proxy: true, // Important for working with proxied connections
@@ -1690,12 +1704,16 @@ const handleServerError = (err) => {
   }
 };
 
-// Start the server
-httpServer
-  .listen(port, () => {
-    console.log("Server is listening on port:", port);
-  })
-  .on("error", handleServerError);
+// Start the server only if not in serverless environment
+if (!process.env.VERCEL_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  httpServer
+    .listen(port, () => {
+      console.log("Server is listening on port:", port);
+    })
+    .on("error", handleServerError);
+} else {
+  console.log("Running in serverless environment, skipping server start");
+}
 
 // For serverless environments like Vercel, also export the app
 // This allows Vercel to import the Express app directly
