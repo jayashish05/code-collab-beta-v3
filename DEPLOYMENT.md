@@ -86,17 +86,47 @@ CLIENT_GOOGLE_SECRET=your-google-client-secret
 
 ## Troubleshooting
 
-1. **Authentication not working**:
-   - Check Google OAuth redirect URIs
-   - Verify environment variables are set correctly
-   - Check browser developer tools for errors
+### 1. Google OAuth redirecting to localhost in production
 
-2. **Database connection issues**:
+This is the most common issue. To fix it:
+
+**A. Check Google Cloud Console Redirect URIs:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Navigate to APIs & Services > Credentials
+3. Click on your OAuth 2.0 Client ID
+4. In "Authorized redirect URIs", ensure you have BOTH:
+   - `http://localhost:3002/auth/google/callback` (for development)
+   - `https://your-app-name.vercel.app/auth/google/callback` (for production)
+
+**B. Set explicit callback URL in Vercel:**
+1. In Vercel dashboard, go to your project settings
+2. Go to Environment Variables
+3. Add: `GOOGLE_CALLBACK_URL` = `https://your-app-name.vercel.app/auth/google/callback`
+4. Redeploy your application
+
+**C. Verify environment detection:**
+Check your Vercel deployment logs to see what callback URL is being used:
+```
+Environment detection:
+- VERCEL_ENV: production
+- VERCEL_URL: your-app-name.vercel.app
+- NODE_ENV: production
+- isVercelProduction: true
+- Google OAuth Callback URL: https://your-app-name.vercel.app/auth/google/callback
+```
+
+### 2. Authentication not working
+   - Check Google OAuth redirect URIs (see above)
+   - Verify environment variables are set correctly in Vercel dashboard
+   - Check browser developer tools for errors
+   - Ensure Google OAuth credentials are valid
+
+### 3. Database connection issues
    - Verify MongoDB URI is correct
    - Check MongoDB Atlas IP whitelist (use 0.0.0.0/0 for all IPs)
    - Ensure database user has proper permissions
 
-3. **Session issues**:
+### 4. Session issues
    - Generate a new session secret
    - Clear browser cookies
    - Check cookie settings in browser developer tools

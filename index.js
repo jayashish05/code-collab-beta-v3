@@ -13,7 +13,6 @@ import randomInteger from "random-int";
 import { v4 as uuidv4 } from "uuid";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import crypto from "crypto";
 import crypto from "crypto"; // Add crypto import for session ID generation
 
 // Validate required environment variables for Vercel
@@ -272,15 +271,22 @@ passport.use(
   ),
 );
 
-// Configure Google Strategy
-const googleCallbackURL = process.env.GOOGLE_CALLBACK_URL || 
-  (process.env.VERCEL_URL ? 
-    `https://${process.env.VERCEL_URL}/auth/google/callback` : 
-    (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV ? 
-      "https://code-collab-beta-v3.vercel.app/auth/google/callback" : 
-      "http://localhost:3002/auth/google/callback"));
+// Configure Google Strategy - Enhanced callback URL detection
+const isVercelProduction = process.env.VERCEL_ENV === 'production' || 
+                          process.env.VERCEL_URL || 
+                          process.env.NODE_ENV === 'production';
 
-console.log("Google OAuth Callback URL:", googleCallbackURL);
+const googleCallbackURL = process.env.GOOGLE_CALLBACK_URL || 
+  (isVercelProduction ? 
+    "https://code-collab-beta-v3.vercel.app/auth/google/callback" : 
+    "http://localhost:3002/auth/google/callback");
+
+console.log("Environment detection:");
+console.log("- VERCEL_ENV:", process.env.VERCEL_ENV);
+console.log("- VERCEL_URL:", process.env.VERCEL_URL);
+console.log("- NODE_ENV:", process.env.NODE_ENV);
+console.log("- isVercelProduction:", isVercelProduction);
+console.log("- Google OAuth Callback URL:", googleCallbackURL);
 
 passport.use(
   "google",
