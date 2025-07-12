@@ -13,6 +13,8 @@ import randomInteger from "random-int";
 import { v4 as uuidv4 } from "uuid";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import crypto from "crypto";
+import crypto from "crypto"; // Add crypto import for session ID generation
 
 // Validate required environment variables for Vercel
 const requiredEnvVars = ['MONGODB_URI'];
@@ -128,7 +130,7 @@ app.use(
     name: "codecollab.sid",
     // Add session debugging
     genid: function(req) {
-      const sessionId = require('crypto').randomBytes(16).toString('hex');
+      const sessionId = crypto.randomBytes(16).toString('hex');
       console.log("Generating new session ID:", sessionId);
       return sessionId;
     }
@@ -274,7 +276,7 @@ passport.use(
 const googleCallbackURL = process.env.GOOGLE_CALLBACK_URL || 
   (process.env.VERCEL_URL ? 
     `https://${process.env.VERCEL_URL}/auth/google/callback` : 
-    (process.env.NODE_ENV === "production" ? 
+    (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV ? 
       "https://code-collab-beta-v3.vercel.app/auth/google/callback" : 
       "http://localhost:3002/auth/google/callback"));
 
