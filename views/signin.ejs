@@ -44,10 +44,22 @@
       <h2 style="font-size: 1.5rem; font-weight: 500;">Log in</h2>
     </div>
 
-    <form action="/auth/signin" method="POST">
+    <form action="/auth/signin" method="POST" id="signinForm">
       <% if (locals.error) { %>
       <div class="ios-error-message" role="alert"><%= error %></div>
       <% } %>
+      <% if (locals.success) { %>
+      <div class="ios-success-message" role="alert" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #c3e6cb;">
+        <%= success %>
+        <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+          <a href="/dashboard" class="ios-btn" style="font-size: 0.85rem; padding: 5px 10px; background-color: #155724; color: white; text-decoration: none; border-radius: 4px;">Go to Dashboard</a>
+        </div>
+      </div>
+      <% } %>
+      <!-- Session status indicator for debugging -->
+      <div class="ios-session-status" style="background-color: #e6f7ff; color: #0366d6; padding: 8px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #91d5ff; font-size: 0.9rem;">
+        <strong>Sign In Status:</strong> Submitting this form will redirect you to the dashboard if credentials are correct.
+      </div>
 
       <div class="ios-form-group">
         <label for="email">Email address</label>
@@ -82,18 +94,28 @@
         <% } %>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+      <div class="ios-form-group" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center;">
+          <input type="checkbox" id="rememberMe" name="rememberMe" style="margin-right: 5px;">
+          <label for="rememberMe" style="font-size: 0.9rem; color: #555;">Remember me</label>
+        </div>
         <a href="/auth/forgot-password" style="color: #3b82f6; text-decoration: none; font-size: 0.9rem;">Forgot your password</a>
       </div>
 
-      <button type="submit" class="ios-btn ios-btn-primary ios-btn-block">
+      <div class="ios-form-group">
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">
+          <i class="bi bi-info-circle" style="margin-right: 5px;"></i>
+          After signing in, you'll be redirected to your dashboard.
+        </p>
+      </div>
+
+      <button type="submit" class="ios-btn ios-btn-primary ios-btn-block" id="loginBtn">
         Log in
       </button>
 
       <div class="ios-divider">
         <span>OR</span>
       </div>
-
       <div class="ios-social-signin">
         <a href="/auth/github" class="ios-btn ios-btn-block">
           <svg
@@ -139,6 +161,7 @@
     </form>
 
     <div style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: #555;">
+
       By signing up, you agree to the <a href="#" style="color: #3b82f6; text-decoration: none;">Terms of Service</a>
       and acknowledge you've read our <a href="#" style="color: #3b82f6; text-decoration: none;">Privacy Policy</a>.
     </div>
@@ -154,8 +177,115 @@
     </div>
   </div>
 
+  <style>
+    .ios-success-message {
+      background-color: #d4edda;
+      color: #155724;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #c3e6cb;
+      animation: fadeIn 0.5s;
+    }
+
+    .ios-success-message a.ios-btn {
+      transition: all 0.2s ease;
+    }
+
+    .ios-success-message a.ios-btn:hover {
+      background-color: #0f4119 !important;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Toggle Switch Styles */
+    .ios-toggle-container {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+    }
+
+    .ios-toggle-container input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .ios-toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 22px;
+    }
+
+    .ios-toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .ios-toggle-slider {
+      background-color: #3b82f6;
+    }
+
+    input:focus + .ios-toggle-slider {
+      box-shadow: 0 0 1px #3b82f6;
+    }
+
+    input:checked + .ios-toggle-slider:before {
+      transform: translateX(18px);
+    }
+  </style>
+
   <script>
     document.addEventListener("DOMContentLoaded", function() {
+      // Add form submission handling
+      const signinForm = document.getElementById('signinForm');
+      const loginBtn = document.getElementById('loginBtn');
+
+      if (signinForm) {
+        signinForm.addEventListener('submit', function(e) {
+          // Basic validation
+          const email = document.getElementById('email').value;
+          const password = document.getElementById('password').value;
+
+          if (!email || !password) {
+            e.preventDefault();
+            alert('Please enter both email and password');
+            return false;
+          }
+
+          // Prevent double submission
+          if (loginBtn) {
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+          }
+
+          // Add a session timestamp for debugging
+          sessionStorage.setItem('loginAttemptTime', new Date().toISOString());
+
+          // Let the form submit normally
+          return true;
+        });
+      }
+
 
       // Theme toggle functionality
       const themeToggle = document.getElementById('themeToggle');

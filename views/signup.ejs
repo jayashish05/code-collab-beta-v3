@@ -22,6 +22,70 @@
       box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
       outline: none;
     }
+
+    .ios-success-message {
+      background-color: #d4edda;
+      color: #155724;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #c3e6cb;
+      animation: fadeIn 0.5s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    /* Toggle Switch Styles */
+    .ios-toggle-container {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+    }
+
+    .ios-toggle-container input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .ios-toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 22px;
+    }
+
+    .ios-toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .ios-toggle-slider {
+      background-color: #3b82f6;
+    }
+
+    input:focus + .ios-toggle-slider {
+      box-shadow: 0 0 1px #3b82f6;
+    }
+
+    input:checked + .ios-toggle-slider:before {
+      transform: translateX(18px);
+    }
   </style>
 </head>
 <body>
@@ -56,10 +120,14 @@
         <h2 style="font-size: 1.5rem; font-weight: 500;">Create account</h2>
       </div>
 
-      <form action="/auth/signup" method="POST">
+      <form action="/auth/signup" method="POST" id="signupForm">
         <% if (locals.error) { %>
         <div class="ios-error-message" role="alert"><%= error %></div>
         <% } %>
+        <!-- Session status indicator for debugging -->
+        <div class="ios-session-status" style="background-color: #e6f7ff; color: #0366d6; padding: 8px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #91d5ff; font-size: 0.9rem;">
+          <strong>Sign Up Status:</strong> Submitting this form will create your account and redirect you to the dashboard.
+        </div>
 
         <div class="ios-form-group">
           <label for="fullname">Full name</label>
@@ -185,9 +253,19 @@
             Continue with Google
           </a>
         </div>
+
+        <div class="ios-form-group">
+          <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">
+            <i class="bi bi-info-circle" style="margin-right: 5px;"></i>
+            After signing up, you'll be redirected to your dashboard automatically.
+          </p>
+        </div>
       </form>
 
       <div style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: #555;">
+        <% if (locals.success) { %>
+        <div class="ios-success-message" role="alert" style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #c3e6cb;"><%= success %></div>
+        <% } %>
         Already have an account? <a href="/auth/signin" style="color: #3b82f6; text-decoration: none;">Sign in</a>
       </div>
 
@@ -204,6 +282,50 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
+      // Form validation
+      const signupForm = document.getElementById('signupForm');
+
+      if (signupForm) {
+        signupForm.addEventListener('submit', function(e) {
+          // Basic validation
+          const fullname = document.getElementById('fullname').value;
+          const email = document.getElementById('email').value;
+          const password = document.getElementById('password').value;
+          const confirmPassword = document.getElementById('confirmPassword').value;
+          const terms = document.getElementById('terms').checked;
+
+          if (!fullname || !email || !password || !confirmPassword) {
+            e.preventDefault();
+            alert('Please fill in all required fields');
+            return false;
+          }
+
+          if (!terms) {
+            e.preventDefault();
+            alert('You must agree to the Terms of Service and Privacy Policy');
+            return false;
+          }
+
+          if (password !== confirmPassword) {
+            e.preventDefault();
+            alert('Passwords do not match');
+            return false;
+          }
+
+          if (password.length < 6) {
+            e.preventDefault();
+            alert('Password must be at least 6 characters long');
+            return false;
+          }
+
+          // Add a session timestamp for debugging
+          sessionStorage.setItem('signupAttemptTime', new Date().toISOString());
+
+          // Let the form submit normally
+          return true;
+        });
+      }
+
       // Theme toggle functionality
       const themeToggle = document.getElementById('themeToggle');
       let darkMode = false; // Start with light mode for iOS feel

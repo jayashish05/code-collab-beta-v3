@@ -14,6 +14,16 @@
       overflow-x: hidden;
     }
 
+    .user-info {
+      background-color: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+
     .dashboard-container {
       min-height: 100vh;
       display: flex;
@@ -532,10 +542,11 @@
                 </div>
               </a>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                <li><a class="dropdown-item" href="#">My Profile (<%= user && user.fullname ? user.fullname : 'User' %>)</a></li>
-                <li><a class="dropdown-item" href="#">Account Settings</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-person-circle me-2"></i> <%= user && user.fullname ? user.fullname : 'User' %></a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-envelope me-2"></i> <%= user && user.email ? user.email : 'No email' %></a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Account Settings</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="/auth/signout">Sign Out</a></li>
+                <li><a class="dropdown-item" href="/auth/signout"><i class="bi bi-box-arrow-right me-2"></i> Sign Out</a></li>
               </ul>
             </li>
           </ul>
@@ -625,6 +636,15 @@
             <h1 class="text-white mb-3">
               Welcome back, <span class="text-primary"><%= user && user.fullname ? user.fullname.split(' ')[0] : 'User' %></span>
             </h1>
+            <div class="user-info">
+              <% if (user) { %>
+                <div><strong>Email:</strong> <%= user.email %></div>
+                <div><strong>Account Type:</strong> <%= user.authType || "Local" %></div>
+                <div><strong>Session Status:</strong> <span class="badge bg-success">Active</span></div>
+              <% } else { %>
+                <div class="alert alert-warning">Not fully authenticated. Please <a href="/auth/signin">sign in again</a>.</div>
+              <% } %>
+            </div>
             <p class="text-white-50">Your collaborative coding workspace is ready. Start a new room or join an existing one.</p>
             <div class="active-users-badge" id="activeUsersCount"></div>
           </div>
@@ -1268,6 +1288,93 @@
       const passwordModal = new bootstrap.Modal(document.getElementById('passwordPromptModal'));
       passwordModal.show();
     }
+  </script>
+
+  <!-- Spline Watermark Removal Script -->
+  <script>
+    // Function to remove Spline watermark
+    function removeSplineWatermark() {
+      // Wait for the Spline viewer to be fully loaded
+      const splineViewer = document.querySelector('spline-viewer');
+      if (!splineViewer) return;
+
+      // Function to hide watermark elements
+      function hideWatermark() {
+        // Try to access the shadow DOM of the spline-viewer
+        const shadowRoot = splineViewer.shadowRoot;
+        if (shadowRoot) {
+          // Look for watermark elements in shadow DOM
+          const watermarkElements = shadowRoot.querySelectorAll('a[href*="spline.design"], div[class*="watermark"], div[class*="logo"], a[class*="spline"]');
+          watermarkElements.forEach(element => {
+            element.style.display = 'none';
+            element.style.visibility = 'hidden';
+            element.style.opacity = '0';
+            element.remove();
+          });
+
+          // Also hide any elements that might contain "Made with Spline" or similar text
+          const allElements = shadowRoot.querySelectorAll('*');
+          allElements.forEach(element => {
+            if (element.textContent && (
+              element.textContent.toLowerCase().includes('spline') ||
+              element.textContent.toLowerCase().includes('made with') ||
+              element.textContent.toLowerCase().includes('powered by')
+            )) {
+              element.style.display = 'none';
+              element.style.visibility = 'hidden';
+              element.style.opacity = '0';
+              element.remove();
+            }
+          });
+        }
+
+        // Also check the main document for any watermark elements
+        const mainWatermarks = document.querySelectorAll('a[href*="spline.design"], div[class*="watermark"], div[class*="spline-watermark"]');
+        mainWatermarks.forEach(element => {
+          element.style.display = 'none';
+          element.style.visibility = 'hidden';
+          element.style.opacity = '0';
+          element.remove();
+        });
+      }
+
+      // Try to hide watermark immediately
+      hideWatermark();
+
+      // Set up a MutationObserver to watch for changes in the shadow DOM
+      if (splineViewer.shadowRoot) {
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+              hideWatermark();
+            }
+          });
+        });
+
+        observer.observe(splineViewer.shadowRoot, {
+          childList: true,
+          subtree: true
+        });
+      }
+
+      // Also set up an interval to periodically check and remove watermarks
+      setInterval(hideWatermark, 1000);
+    }
+
+    // Wait for the page to load completely
+    window.addEventListener('load', function() {
+      // Wait a bit more for Spline to initialize
+      setTimeout(removeSplineWatermark, 2000);
+    });
+
+    // Also try when DOM content is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(removeSplineWatermark, 3000);
+    });
+
+    // Additional fallback - try multiple times
+    setTimeout(removeSplineWatermark, 5000);
+    setTimeout(removeSplineWatermark, 10000);
   </script>
 </body>
 </html>
