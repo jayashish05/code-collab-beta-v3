@@ -1,5 +1,5 @@
 import express from "express";
-import { collection, safeDBOperation, ensureDBConnection, connectDB } from "./config.js";
+import { collection, Room, safeDBOperation, ensureDBConnection, connectDB } from "./config.js";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -111,30 +111,41 @@ let processingBash = false;
 const isProduction = process.env.NODE_ENV === "production";
 const isVercel = process.env.VERCEL_ENV !== undefined;
 
-// Enhanced session configuration for serverless and localhost
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "codecollab_dev_secret_replace_in_production_12345",
-    resave: false,
-    saveUninitialized: false,
-    rolling: true, // Reset expiration on activity
-    cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      httpOnly: true,
-      secure: isProduction || (process.env.HTTPS === "true"), // HTTPS in production or when explicitly set
-      sameSite: isProduction ? "lax" : "lax", // Use lax for better compatibility
-      domain: undefined, // Let browser handle domain automatically
-      path: "/", // Ensure cookies work for all paths
-    },
-    name: "codecollab.sid",
-    // Add session debugging
-    genid: function(req) {
-      const sessionId = crypto.randomBytes(16).toString('hex');
-      console.log("Generating new session ID:", sessionId);
-      return sessionId;
-    }
-  }),
-);
+// Enhanced session configuration for different hosting environments
+const sessionConfig = {
+  secret: process.env.SESSION_SECRET || "codecollab_dev_secret_replace_in_production_12345",
+  resave: false,
+  saveUninitialized: false,
+  rolling: true, // Reset expiration on activity
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true,
+    secure: false, // Will be set dynamically based on environment
+    sameSite: "lax", // Use lax for better compatibility
+    domain: undefined, // Let browser handle domain automatically
+    path: "/", // Ensure cookies work for all paths
+  },
+  name: "codecollab.sid",
+  // Add session debugging
+  genid: function(req) {
+    const sessionId = crypto.randomBytes(16).toString('hex');
+    console.log("Generating new session ID:", sessionId);
+    return sessionId;
+  }
+};
+
+// Adjust session security settings based on environment
+if (isProduction || isVercel || process.env.HTTPS === 'true') {
+  // Use secure cookies for production/HTTPS environments
+  sessionConfig.cookie.secure = false; // Keep false for Vercel proxy compatibility
+  console.log("Session configured for production/HTTPS environment");
+} else {
+  // Development environment
+  sessionConfig.cookie.secure = false;
+  console.log("Session configured for development environment");
+}
+
+app.use(session(sessionConfig));
 
 // Initialize passport
 app.use(passport.initialize());
@@ -271,21 +282,146 @@ passport.use(
   ),
 );
 
-// Configure Google Strategy - Enhanced callback URL detection
-const isVercelProduction = process.env.VERCEL_ENV === 'production' || 
-                          process.env.VERCEL_URL || 
-                          process.env.NODE_ENV === 'production';
+/**
+ * Dynamic URL Detection and Environment Configuration
+ * 
+ * This section handles automatic detection of the application's base URL
+ * for different hosting environments:
+ * 
+ * 1. Vercel Production: https://code-collab-beta-v3.vercel.app
+ * 2. Vercel Preview: https://[deployment-url].vercel.app  
+ * 3. GitHub Codespaces: https://[codespace-name]-[port].app.github.dev
+ * 4. Port Forwarding: Uses FORWARDED_URL environment variable
+ * 5. Localhost with custom port: http://localhost:[PORT]
+ * 6. Localhost default: http://localhost:3002
+ * 
+ * The URL detection supports:
+ * - Request-based detection (using headers like x-forwarded-host, x-forwarded-proto)
+ * - Environment variable overrides (BASE_URL, GOOGLE_CALLBACK_URL)
+ * - Automatic protocol detection (HTTP/HTTPS)
+ * - Proxy and load balancer compatibility
+ */
 
-const googleCallbackURL = process.env.GOOGLE_CALLBACK_URL || 
-  (isVercelProduction ? 
-    "https://code-collab-beta-v3.vercel.app/auth/google/callback" : 
-    "http://localhost:3002/auth/google/callback");
+// Enhanced environment detection and URL configuration
+const isVercelEnvironment = process.env.VERCEL_ENV || process.env.VERCEL_URL;
+const isVercelProduction = process.env.VERCEL_ENV === 'production';
+const isCodespaces = process.env.CODESPACE_NAME || process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
+const isCustomPort = process.env.PORT && process.env.PORT !== '3002';
 
-console.log("Environment detection:");
+// Function to get the current base URL dynamically
+function getBaseURL(req = null) {
+  // Priority 1: Explicitly set base URL
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL;
+  }
+  
+  // Priority 2: Request-based detection (when available)
+  if (req) {
+    // Check for forwarded headers (common in reverse proxies)
+    const forwardedProto = req.headers['x-forwarded-proto'] || 
+                          req.headers['x-forwarded-protocol'] ||
+                          req.headers['cloudfront-forwarded-proto'];
+    
+    const forwardedHost = req.headers['x-forwarded-host'] || 
+                         req.headers['x-forwarded-server'] ||
+                         req.headers['x-original-host'];
+    
+    // Determine protocol
+    let protocol = forwardedProto || (req.connection.encrypted ? 'https' : 'http');
+    if (protocol.includes(',')) {
+      protocol = protocol.split(',')[0].trim(); // Take first protocol if multiple
+    }
+    
+    // Determine host
+    const host = forwardedHost || 
+                req.headers.host || 
+                req.get('host') ||
+                req.hostname;
+    
+    if (host) {
+      // Clean up the host (remove port if it's standard)
+      let cleanHost = host;
+      if ((protocol === 'https' && host.endsWith(':443')) ||
+          (protocol === 'http' && host.endsWith(':80'))) {
+        cleanHost = host.split(':')[0];
+      }
+      
+      return `${protocol}://${cleanHost}`;
+    }
+  }
+  
+  // Priority 3: Environment-based detection
+  if (isVercelEnvironment) {
+    if (isVercelProduction) {
+      return "https://code-collab-beta-v3.vercel.app";
+    } else if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}`;
+    }
+  }
+  
+  // Priority 4: Codespaces detection
+  if (isCodespaces) {
+    const codespaceName = process.env.CODESPACE_NAME;
+    const port = process.env.PORT || '3002';
+    if (codespaceName) {
+      return `https://${codespaceName}-${port}.app.github.dev`;
+    }
+    
+    // Alternative codespace format
+    if (process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
+      return `https://${port}-${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
+    }
+  }
+  
+  // Priority 5: Custom port forwarding
+  if (process.env.FORWARDED_URL) {
+    return process.env.FORWARDED_URL;
+  }
+  
+  // Priority 6: Localhost with custom port
+  if (isCustomPort) {
+    const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
+    return `${protocol}://localhost:${process.env.PORT}`;
+  }
+  
+  // Priority 7: Default localhost
+  const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
+  return `${protocol}://localhost:3002`;
+}
+
+// Determine the appropriate callback URL and base URL based on environment
+let googleCallbackURL;
+let baseURL;
+
+if (process.env.GOOGLE_CALLBACK_URL) {
+  // Use explicitly set callback URL (highest priority)
+  googleCallbackURL = process.env.GOOGLE_CALLBACK_URL;
+  // Extract base URL from callback URL
+  baseURL = googleCallbackURL.replace('/auth/google/callback', '');
+} else {
+  // Get base URL and construct callback URL
+  baseURL = getBaseURL();
+  googleCallbackURL = `${baseURL}/auth/google/callback`;
+}
+
+console.log("Enhanced Environment Detection:");
 console.log("- VERCEL_ENV:", process.env.VERCEL_ENV);
 console.log("- VERCEL_URL:", process.env.VERCEL_URL);
 console.log("- NODE_ENV:", process.env.NODE_ENV);
+console.log("- CODESPACE_NAME:", process.env.CODESPACE_NAME);
+console.log("- GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:", process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN);
+console.log("- PORT:", process.env.PORT);
+console.log("- HTTPS:", process.env.HTTPS);
+console.log("- BASE_URL:", process.env.BASE_URL);
+console.log("- FORWARDED_URL:", process.env.FORWARDED_URL);
+console.log("- GOOGLE_CALLBACK_URL:", process.env.GOOGLE_CALLBACK_URL);
+console.log("Environment flags:");
+console.log("- isVercelEnvironment:", isVercelEnvironment);
 console.log("- isVercelProduction:", isVercelProduction);
+console.log("- isCodespaces:", isCodespaces);
+console.log("- isCustomPort:", isCustomPort);
+console.log("Computed URLs:");
+console.log("- Base URL:", baseURL);
 console.log("- Google OAuth Callback URL:", googleCallbackURL);
 
 passport.use(
@@ -427,6 +563,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// Middleware to make base URL available to all routes and templates
+app.use((req, res, next) => {
+  // Get the current base URL dynamically
+  const currentBaseURL = getBaseURL(req);
+  
+  // Make base URL available to routes and templates
+  req.baseURL = currentBaseURL;
+  res.locals.baseURL = currentBaseURL;
+  
+  next();
+});
+
 // Set up EJS as view engine
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -524,7 +672,7 @@ app.get("/dashboard", (req, res) => {
 });
 
 // Room join route
-app.get("/room/join", (req, res) => {
+app.get("/room/join", async (req, res) => {
   // Check if user is in session
   if (!req.user) {
     return res.redirect("/auth/signin");
@@ -537,42 +685,71 @@ app.get("/room/join", (req, res) => {
     return res.redirect("/dashboard");
   }
 
-  // In a real implementation, you would fetch the room from a database
-  // For now, we'll check if the room exists in our active rooms
-  const roomExists = activeRooms.has(roomId);
+  try {
+    // Check if room exists in MongoDB
+    const roomData = await safeDBOperation(async () => {
+      return await Room.findOne({ roomId: roomId.toString() });
+    });
 
-  // If room doesn't exist yet but is stored in session (created by this user)
-  const isCreator = roomId.toString() === req.session.lastCreatedRoomId;
+    const roomExists = activeRooms.has(roomId) || roomData;
 
-  // Check if room requires password
-  if (isCreator) {
-    // Room creator doesn't need to enter password
-    console.log(
-      `Room creator ${req.user.fullname || "Anonymous"} is joining room ${roomId}`,
-    );
-  } else if (roomExists) {
-    // For a real app, you would check against a stored password in a database
-    // For this demo, we'll simplify and assume if a password was provided, it's correct
-    const requiresPassword = req.session.isPasswordProtected;
+    // If room doesn't exist yet but is stored in session (created by this user)
+    const isCreator = roomId.toString() === req.session.lastCreatedRoomId;
 
-    if (requiresPassword && !roomPassword) {
-      // Redirect back to dashboard with error
+    // Check if room requires password
+    if (isCreator) {
+      // Room creator doesn't need to enter password
+      console.log(
+        `Room creator ${req.user.fullname || "Anonymous"} is joining room ${roomId}`,
+      );
+    } else if (roomData && roomData.hasPassword) {
+      // Room exists and requires password
+      if (!roomPassword) {
+        // Redirect back to dashboard with error
+        return res.redirect(
+          `/dashboard?error=Password required for room ${roomId}`,
+        );
+      }
+      
+      // Validate password
+      if (roomPassword !== roomData.password) {
+        return res.redirect(
+          `/dashboard?error=Incorrect password for room ${roomId}`,
+        );
+      }
+      
+      console.log(
+        `User ${req.user.fullname || "Anonymous"} is joining password-protected room ${roomId}`,
+      );
+
+      // Update last accessed time
+      await safeDBOperation(async () => {
+        await Room.updateOne(
+          { roomId: roomId.toString() },
+          { lastAccessed: new Date() }
+        );
+      });
+    } else if (roomExists) {
+      console.log(
+        `User ${req.user.fullname || "Anonymous"} is joining room ${roomId}`,
+      );
+    } else {
+      // Room doesn't exist
       return res.redirect(
-        `/dashboard?error=Password required for room ${roomId}`,
+        `/dashboard?error=Room ${roomId} does not exist`,
       );
     }
 
-    console.log(
-      `User ${req.user.fullname || "Anonymous"} is joining room ${roomId}`,
-    );
+    // Redirect to the room
+    res.redirect(`/room/${roomId}`);
+  } catch (error) {
+    console.error("Error accessing room:", error);
+    return res.redirect(`/dashboard?error=Failed to access room ${roomId}`);
   }
-
-  // Redirect to the room
-  res.redirect(`/room/${roomId}`);
 });
 
 // Room creation route
-app.post("/room/create", (req, res) => {
+app.post("/room/create", async (req, res) => {
   // Check if user is in session
   if (!req.user) {
     return res.redirect("/auth/signin");
@@ -588,43 +765,57 @@ app.post("/room/create", (req, res) => {
     isPasswordProtected,
   } = req.body;
 
-  // Generate a random room ID (6-digit number)
-  const roomId = randomInteger(100000, 999999);
+  try {
+    // Generate a random room ID (6-digit number)
+    const roomId = randomInteger(100000, 999999);
 
-  // In a real implementation, you would save the room to the database
-  // For now, we'll just log the information and redirect to the room
-  console.log("Creating room:", {
-    id: roomId,
-    name: roomName,
-    language: roomLanguage,
-    description: roomDescription,
-    visibility: roomVisibility,
-    hasPassword: isPasswordProtected === "on",
-    password: isPasswordProtected === "on" ? roomPassword : null,
-    createdBy: req.user._id || req.user.id || req.user.googleId,
-    createdAt: new Date(),
-  });
+    // Create room data for MongoDB
+    const isPrivateRoom = roomVisibility === "private";
+    const roomData = {
+      roomId: roomId.toString(),
+      name: roomName,
+      description: roomDescription || "",
+      hasPassword: isPrivateRoom,
+      password: isPrivateRoom ? roomPassword : null,
+      createdBy: req.user.email,
+      createdAt: new Date(),
+      isActive: true,
+      maxUsers: 10,
+      lastAccessed: new Date()
+    };
 
-  // Store room information in session for later use
-  req.session.roomName = roomName;
-  req.session.roomLanguage = roomLanguage;
-  req.session.roomDescription = roomDescription;
-  req.session.roomVisibility = roomVisibility;
+    // Save room to MongoDB
+    await safeDBOperation(async () => {
+      const room = new Room(roomData);
+      await room.save();
+    });
 
-  // Store password if room is password protected
-  if (isPasswordProtected === "on" && roomPassword) {
-    req.session.roomPassword = roomPassword;
-    req.session.isPasswordProtected = true;
-  } else {
-    req.session.roomPassword = null;
-    req.session.isPasswordProtected = false;
+    console.log("Creating room:", roomData);
+
+    // Store room information in session for later use
+    req.session.roomName = roomName;
+    req.session.roomLanguage = roomLanguage;
+    req.session.roomDescription = roomDescription;
+    req.session.roomVisibility = roomVisibility;
+
+    // Store password if room is private
+    if (isPrivateRoom && roomPassword) {
+      req.session.roomPassword = roomPassword;
+      req.session.isPasswordProtected = true;
+    } else {
+      req.session.roomPassword = null;
+      req.session.isPasswordProtected = false;
+    }
+
+    // Store the room ID of the last created room
+    req.session.lastCreatedRoomId = roomId;
+
+    // Redirect to the room page
+    res.redirect(`/room/${roomId}`);
+  } catch (error) {
+    console.error("Error creating room:", error);
+    return res.redirect("/dashboard?error=Failed to create room");
   }
-
-  // Store the room ID of the last created room
-  req.session.lastCreatedRoomId = roomId;
-
-  // Redirect to the room page
-  res.redirect(`/room/${roomId}`);
 });
 
 app.get("/room/:roomId", (req, res) => {
@@ -774,22 +965,42 @@ app.get(
     const returnTo = req.session.returnTo || "/dashboard";
     delete req.session.returnTo;
 
+    // Get the current base URL dynamically using request context
+    // This ensures the redirect works correctly across all hosting environments:
+    // - Vercel: https://code-collab-beta-v3.vercel.app/dashboard
+    // - Localhost: http://localhost:3002/dashboard  
+    // - Port forwarding: https://forwarded-domain.com/dashboard
+    const currentBaseURL = getBaseURL(req);
+    
+    // Create the full redirect URL using the dynamically detected base URL
+    const redirectURL = returnTo.startsWith('http') ? returnTo : `${currentBaseURL}${returnTo}`;
+    console.log("Current base URL:", currentBaseURL);
+    console.log("Redirecting to:", redirectURL);
+
     // Force session save before redirecting
     req.session.save((err) => {
       if (err) {
         console.error("Error saving session:", err);
       }
-      res.redirect(returnTo);
+      res.redirect(redirectURL);
     });
   },
   function (err, req, res, next) {
     console.error("Google auth error:", err);
+    
+    // Get the current base URL dynamically
+    const currentBaseURL = getBaseURL(req);
+    
     // Store error message in session
     req.session.authError = err.message || "Google authentication failed";
+    
     // Log specific error details for debugging
     if (err.oauthError) {
       console.error("OAuth error details:", err.oauthError);
     }
+    
+    console.log("Auth error, redirecting to signin with base URL:", currentBaseURL);
+    
     res.redirect(
       "/auth/signin?error=google_auth_failed&message=" +
         encodeURIComponent(err.message || "Authentication failed"),
@@ -889,7 +1100,10 @@ app.post("/auth/signup", async (req, res) => {
           }
           console.log("User logged in after signup:", data.email);
           console.log("Session ID after signup:", req.sessionID);
-          return res.redirect("/dashboard");
+          // Use relative redirect for local development to maintain session
+          const redirectURL = "/dashboard";
+          console.log("Redirecting after signup to:", redirectURL);
+          return res.redirect(redirectURL);
         });
       } else {
         return res.render("signup.ejs", {
@@ -979,7 +1193,10 @@ app.post("/auth/signin", async (req, res, next) => {
               console.error("Session save error:", saveErr);
             }
             // Redirect to the dashboard after successful login
-            return res.redirect("/dashboard");
+            // Use relative redirect for local development to maintain session
+            const redirectURL = "/dashboard";
+            console.log("Redirecting after login to:", redirectURL);
+            return res.redirect(redirectURL);
           });
         });
       } catch (loginError) {
@@ -1110,42 +1327,68 @@ app.get("/auth/signout", (req, res, next) => {
 });
 
 // Room status API endpoint
-app.get("/api/rooms/status", (req, res) => {
+app.get("/api/rooms/status", async (req, res) => {
   // Check if user is authenticated
   if (!req.user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const roomsStatus = [];
+  try {
+    const roomsStatus = [];
 
-  // Format the rooms data for the response
-  for (const [roomId, users] of activeRooms.entries()) {
-    // Check if this is the room created by the current user
-    const isCreatedByCurrentUser =
-      roomId.toString() === req.session.lastCreatedRoomId;
-
-    roomsStatus.push({
-      roomId,
-      userCount: users.size,
-      isPasswordProtected: isCreatedByCurrentUser
-        ? req.session.isPasswordProtected
-        : false,
-      users: Array.from(users.values()).map((user) => ({
-        userId: user.userId,
-        username: user.username,
-        picture: user.picture,
-      })),
+    // Get all rooms from MongoDB
+    const allRooms = await safeDBOperation(async () => {
+      return await Room.find({ isActive: true }).sort({ lastAccessed: -1 });
     });
-  }
 
-  res.json({
-    activeRooms: roomsStatus,
-    totalRooms: activeRooms.size,
-    totalUsers: [...activeRooms.values()].reduce(
-      (total, users) => total + users.size,
-      0,
-    ),
-  });
+    // Add active rooms (currently connected users)
+    for (const [roomId, users] of activeRooms.entries()) {
+      const roomData = allRooms.find(r => r.roomId === roomId.toString());
+      
+      roomsStatus.push({
+        roomId,
+        name: roomData?.name || `Room ${roomId}`,
+        userCount: users.size,
+        isPasswordProtected: roomData?.hasPassword || false,
+        isActive: true,
+        language: 'javascript', // Default since we removed language field
+        createdBy: roomData?.createdBy || 'Unknown',
+        users: Array.from(users.values()).map((user) => ({
+          userId: user.userId,
+          username: user.username,
+          picture: user.picture,
+        })),
+      });
+    }
+
+    // Add created but not yet active rooms
+    for (const roomData of allRooms) {
+      if (!activeRooms.has(roomData.roomId)) {
+        roomsStatus.push({
+          roomId: roomData.roomId,
+          name: roomData.name,
+          userCount: 0,
+          isPasswordProtected: roomData.hasPassword,
+          isActive: false,
+          language: 'javascript', // Default since we removed language field
+          createdBy: roomData.createdBy,
+          users: [],
+        });
+      }
+    }
+
+    res.json({
+      activeRooms: roomsStatus,
+      totalRooms: roomsStatus.length,
+      totalUsers: [...activeRooms.values()].reduce(
+        (total, users) => total + users.size,
+        0,
+      ),
+    });
+  } catch (error) {
+    console.error("Error fetching rooms status:", error);
+    res.status(500).json({ error: "Failed to fetch rooms status" });
+  }
 });
 
 // Add authentication status endpoint for debugging
@@ -1177,6 +1420,64 @@ app.get("/api/auth-status", (req, res) => {
     console.error("Auth status check error:", error);
     res.status(500).json({
       error: "Failed to check auth status",
+      message: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Add URL detection debug endpoint
+app.get("/api/url-debug", (req, res) => {
+  try {
+    const currentBaseURL = getBaseURL(req);
+    
+    const urlDebugInfo = {
+      timestamp: new Date().toISOString(),
+      detectedBaseURL: currentBaseURL,
+      staticBaseURL: baseURL,
+      googleCallbackURL: googleCallbackURL,
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        VERCEL_ENV: process.env.VERCEL_ENV,
+        VERCEL_URL: process.env.VERCEL_URL,
+        CODESPACE_NAME: process.env.CODESPACE_NAME,
+        GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN,
+        PORT: process.env.PORT,
+        HTTPS: process.env.HTTPS,
+        BASE_URL: process.env.BASE_URL,
+        FORWARDED_URL: process.env.FORWARDED_URL,
+        GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL,
+      },
+      flags: {
+        isVercelEnvironment: isVercelEnvironment,
+        isVercelProduction: isVercelProduction,
+        isCodespaces: isCodespaces,
+        isCustomPort: isCustomPort,
+      },
+      requestHeaders: {
+        host: req.headers.host,
+        'x-forwarded-host': req.headers['x-forwarded-host'],
+        'x-forwarded-proto': req.headers['x-forwarded-proto'],
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'user-agent': req.headers['user-agent'],
+        origin: req.headers.origin,
+        referer: req.headers.referer,
+      },
+      requestInfo: {
+        protocol: req.protocol,
+        secure: req.secure,
+        hostname: req.hostname,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl,
+        url: req.url,
+      }
+    };
+
+    res.json(urlDebugInfo);
+  } catch (error) {
+    console.error("URL debug error:", error);
+    res.status(500).json({
+      error: "Failed to get URL debug info",
       message: error.message,
       timestamp: new Date().toISOString(),
     });
@@ -1716,11 +2017,24 @@ const handleServerError = (err) => {
 if (!process.env.VERCEL_ENV && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
   httpServer
     .listen(port, () => {
-      console.log("Server is listening on port:", port);
+      console.log("✅ CodeCollab Server Started Successfully!");
+      console.log("📍 Server listening on port:", port);
+      console.log("🌐 Base URL:", baseURL);
+      console.log("🔗 Google OAuth Callback:", googleCallbackURL);
+      console.log("🏠 Dashboard URL:", `${baseURL}/dashboard`);
+      console.log("🔐 Sign In URL:", `${baseURL}/auth/signin`);
+      console.log("📊 Health Check:", `${baseURL}/api/health`);
+      console.log("🐛 URL Debug:", `${baseURL}/api/url-debug`);
+      console.log("═".repeat(60));
     })
     .on("error", handleServerError);
 } else {
-  console.log("Running in serverless environment, skipping server start");
+  console.log("✅ CodeCollab Serverless Environment Initialized");
+  console.log("🌐 Base URL:", baseURL);
+  console.log("🔗 Google OAuth Callback:", googleCallbackURL);
+  console.log("📊 Health Check endpoint available at: /api/health");
+  console.log("🐛 URL Debug endpoint available at: /api/url-debug");
+  console.log("═".repeat(60));
 }
 
 // For serverless environments like Vercel, also export the app

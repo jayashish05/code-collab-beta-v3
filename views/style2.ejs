@@ -673,19 +673,20 @@
   }
 
   .ios-feature {
-    background-color: var(--ios-card-bg);
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     border-radius: var(--ios-border-radius);
     padding: 2rem;
-    box-shadow: 0 8px 30px var(--ios-shadow);
-    backdrop-filter: blur(var(--ios-backdrop-blur));
-    -webkit-backdrop-filter: blur(var(--ios-backdrop-blur));
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.2); /* Add subtle border */
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
   .ios-feature:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 40px var(--ios-shadow);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    background-color: rgba(255, 255, 255, 0.15);
   }
 
   .ios-feature-icon {
@@ -743,7 +744,12 @@
 
   /* Dark mode overrides for home page */
   body.dark-mode .ios-feature {
-    background-color: var(--ios-dark-card-bg);
+    background-color: rgba(15, 15, 25, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  body.dark-mode .ios-feature:hover {
+    background-color: rgba(15, 15, 25, 0.6);
   }
 
   body.dark-mode .ios-feature p {

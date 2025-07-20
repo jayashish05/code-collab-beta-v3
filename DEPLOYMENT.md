@@ -86,17 +86,35 @@ CLIENT_GOOGLE_SECRET=your-google-client-secret
 
 ## Troubleshooting
 
-### 1. Google OAuth redirecting to localhost in production
+### 1. Google OAuth redirecting to localhost in production/dev tunnel
 
-This is the most common issue. To fix it:
+This is the most common issue. The app correctly calls Google OAuth with the right callback URL, but after authentication, redirects to localhost instead of your production domain.
+
+**Root Cause:** The post-authentication redirect was using relative URLs that resolve to localhost.
+
+**Fix (Already Implemented):** The app now automatically extracts the base URL from your environment and uses absolute URLs for all post-authentication redirects.
 
 **A. Check Google Cloud Console Redirect URIs:**
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Navigate to APIs & Services > Credentials
 3. Click on your OAuth 2.0 Client ID
-4. In "Authorized redirect URIs", ensure you have BOTH:
-   - `http://localhost:3002/auth/google/callback` (for development)
-   - `https://your-app-name.vercel.app/auth/google/callback` (for production)
+4. In "Authorized redirect URIs", ensure you have:
+   - `http://localhost:3002/auth/google/callback` (for local development)
+   - `https://your-app-name.vercel.app/auth/google/callback` (for Vercel)
+   - `https://your-tunnel-url/auth/google/callback` (for dev tunnels)
+
+**B. For Dev Tunnels:**
+Set your dev tunnel callback URL in the environment:
+```bash
+GOOGLE_CALLBACK_URL=https://your-tunnel-url/auth/google/callback
+```
+
+**C. Check the Console Logs:**
+When you start the server, verify these logs show the correct URLs:
+```
+- Base URL: https://your-domain.com
+- Google OAuth Callback URL: https://your-domain.com/auth/google/callback
+```
 
 **B. Set explicit callback URL in Vercel:**
 1. In Vercel dashboard, go to your project settings

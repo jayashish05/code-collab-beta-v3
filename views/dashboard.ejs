@@ -30,6 +30,42 @@
       flex-direction: column;
     }
 
+    /* Hamburger Menu Styles */
+    .hamburger-menu {
+      display: none;
+      flex-direction: column;
+      justify-content: space-around;
+      width: 30px;
+      height: 30px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin-right: 1rem;
+      z-index: 1001;
+    }
+
+    .hamburger-menu span {
+      width: 100%;
+      height: 3px;
+      background-color: white;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+      transform-origin: center;
+    }
+
+    .hamburger-menu.active span:nth-child(1) {
+      transform: rotate(45deg) translate(6px, 6px);
+    }
+
+    .hamburger-menu.active span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .hamburger-menu.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(8px, -8px);
+    }
+
     /* Navbar styles */
     .top-navbar {
       background: rgba(255, 255, 255, 0.1);
@@ -98,6 +134,54 @@
       position: sticky;
       top: 60px;
       overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+
+    /* Mobile sidebar styles */
+    @media (max-width: 768px) {
+      .hamburger-menu {
+        display: flex;
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        z-index: 1000;
+        transform: translateX(-100%);
+        width: 280px;
+        height: calc(100vh - 60px);
+      }
+
+      .sidebar.show {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        width: 100%;
+      }
+
+      .content {
+        width: 100%;
+        padding: 1rem;
+      }
+
+      /* Overlay for mobile */
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        width: 100%;
+        height: calc(100vh - 60px);
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+      }
+
+      .sidebar-overlay.show {
+        display: block;
+      }
+    }
     }
 
     .sidebar-section {
@@ -519,6 +603,13 @@
     <!-- Top Navbar -->
     <nav class="navbar navbar-expand-lg top-navbar">
       <div class="container-fluid">
+        <!-- Hamburger Menu Button -->
+        <button class="hamburger-menu" id="sidebarToggle" title="Toggle Sidebar">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        
         <a class="navbar-brand" href="#">CodeCollab</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
@@ -555,8 +646,11 @@
     </nav>
 
     <div class="main-content">
+      <!-- Sidebar Overlay for Mobile -->
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
+      
       <!-- Sidebar -->
-      <div class="sidebar">
+      <div class="sidebar" id="sidebar">
         <div class="sidebar-section">
           <h2 class="sidebar-heading">Your Rooms</h2>
           <ul class="sidebar-menu">
@@ -986,21 +1080,14 @@
               <label for="roomVisibility" class="form-label">Room Visibility</label>
               <select class="form-select" id="roomVisibility" name="roomVisibility">
                 <option value="public">Public (Anyone can join)</option>
-                <option value="private">Private (Invite only)</option>
+                <option value="private">Private (Password required)</option>
               </select>
             </div>
-            <div class="mb-3">
-              <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" id="isPasswordProtected" name="isPasswordProtected">
-                <label class="form-check-label" for="isPasswordProtected">
-                  Password protect this room
-                </label>
-              </div>
-              <div id="passwordInputContainer" style="display: none;">
-                <label for="roomPassword" class="form-label">Room Password</label>
-                <input type="password" class="form-control" id="roomPassword" name="roomPassword" placeholder="Set a password for your room" minlength="4">
-                <div class="form-text">Password must be at least 4 characters long</div>
-              </div>
+            <div class="mb-3" id="passwordInputContainer" style="display: none;">
+              <label for="roomPassword" class="form-label">Room Password</label>
+              <input type="password" class="form-control" id="roomPassword" name="roomPassword" placeholder="Set a password for your room" minlength="4">
+              <div class="form-text">Password must be at least 4 characters long</div>
+              <input type="hidden" id="isPasswordProtected" name="isPasswordProtected" value="">
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -1044,6 +1131,53 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
+      // Hamburger menu functionality
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebar = document.getElementById('sidebar');
+      const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+      function toggleSidebar() {
+        sidebarToggle.classList.toggle('active');
+        sidebar.classList.toggle('show');
+        sidebarOverlay.classList.toggle('show');
+      }
+
+      if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+      }
+
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+      }
+
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', function(event) {
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickOnToggle = sidebarToggle.contains(event.target);
+        
+        if (!isClickInsideSidebar && !isClickOnToggle && sidebar.classList.contains('show')) {
+          toggleSidebar();
+        }
+      });
+
+      // Password protection toggle for room creation
+      const passwordCheckbox = document.getElementById('isPasswordProtected');
+      const passwordContainer = document.getElementById('passwordInputContainer');
+      const passwordInput = document.getElementById('roomPassword');
+
+      if (passwordCheckbox && passwordContainer && passwordInput) {
+        passwordCheckbox.addEventListener('change', function() {
+          if (this.checked) {
+            passwordContainer.style.display = 'block';
+            passwordInput.required = true;
+          } else {
+            passwordContainer.style.display = 'none';
+            passwordInput.required = false;
+            passwordInput.value = '';
+          }
+        });
+      }
+
       // Fetch active rooms data
       fetchActiveRooms();
 
@@ -1119,18 +1253,23 @@
         });
     }
 
-    // Toggle password input visibility
-    document.getElementById('isPasswordProtected').addEventListener('change', function() {
+    // Toggle password input visibility based on room visibility selection
+    document.getElementById('roomVisibility').addEventListener('change', function() {
       const passwordContainer = document.getElementById('passwordInputContainer');
-      passwordContainer.style.display = this.checked ? 'block' : 'none';
-
-      // Make password required only when checkbox is checked
       const passwordInput = document.getElementById('roomPassword');
-      passwordInput.required = this.checked;
-
-      // If unchecked, clear any entered password
-      if (!this.checked) {
+      const isPasswordProtectedField = document.getElementById('isPasswordProtected');
+      
+      if (this.value === 'private') {
+        // Show password section for private rooms
+        passwordContainer.style.display = 'block';
+        passwordInput.required = true;
+        isPasswordProtectedField.value = 'on';
+      } else {
+        // Hide password section for public rooms
+        passwordContainer.style.display = 'none';
+        passwordInput.required = false;
         passwordInput.value = '';
+        isPasswordProtectedField.value = '';
       }
     });
 
@@ -1157,20 +1296,6 @@
       // Update counts
       activeRoomsCount.textContent = data.totalRooms;
       activeUsersCount.textContent = data.totalUsers > 0 ? `${data.totalUsers} users online` : '';
-
-      // Display error message if there's one in the URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const errorMessage = urlParams.get('error');
-      if (errorMessage) {
-        const errorAlert = document.createElement('div');
-        errorAlert.className = 'alert alert-danger alert-dismissible fade show';
-        errorAlert.innerHTML = `${errorMessage} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
-        const alertContainer = document.querySelector('.alert-container') || document.querySelector('.content');
-        alertContainer.prepend(errorAlert);
-
-        // Remove the error parameter from URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
 
       // Clear existing list
       activeRoomsList.innerHTML = '';
