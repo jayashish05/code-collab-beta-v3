@@ -2,7 +2,6 @@
 
 CodeCollab is an interactive, real-time collaborative coding platform that enables multiple users to code together simultaneously, chat, and share ideas in a seamless environment.
 
-![CodeCollab Screenshot](https://i.imgur.com/1234567.png)
 
 ## Features
 
