@@ -72,6 +72,7 @@
       z-index: 1;
       background-color: rgba(15, 15, 25, 0.9);
       backdrop-filter: blur(15px);
+      padding-bottom: 40px; /* Account for footer */
     }
 
     body:not(.dark-mode) .room-container {
@@ -262,24 +263,148 @@
       outline: none;
     }
 
-    .chat-panel {
-      width: 300px;
+    /* Footer Section */
+    .footer-section {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background-color: rgba(25, 25, 35, 0.98);
+      border-top: 1px solid rgba(70, 70, 90, 0.5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+
+    body:not(.dark-mode) .footer-section {
+      background-color: rgba(240, 240, 240, 0.98);
+      color: #333;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 0.85rem;
+      color: #a0a0a0;
+    }
+
+    body:not(.dark-mode) .footer-left {
+      color: #666;
+    }
+
+    .footer-right {
+      display: flex;
+      gap: 10px;
+    }
+
+    .footer-btn {
+      background: none;
+      border: none;
+      color: #a0a0a0;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-btn:hover {
+      background-color: rgba(60, 60, 80, 0.5);
+      color: #fff;
+    }
+
+    .footer-btn.active {
+      background-color: rgba(0, 122, 255, 0.3);
+      color: #fff;
+    }
+
+    body:not(.dark-mode) .footer-btn {
+      color: #666;
+    }
+
+    body:not(.dark-mode) .footer-btn:hover {
+      background-color: rgba(200, 200, 200, 0.5);
+      color: #333;
+    }
+
+    /* Slide-in Chat Panel (VS Code style) */
+    .chat-sidebar {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      height: 100vh;
+      background-color: rgba(25, 25, 35, 0.98);
       border-left: 1px solid rgba(70, 70, 90, 0.5);
       display: flex;
       flex-direction: column;
-      background-color: rgba(25, 25, 35, 0.95);
+      z-index: 999;
+      transition: right 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    body:not(.dark-mode) .chat-sidebar {
+      background-color: rgba(248, 249, 250, 0.98);
+    }
+
+    .chat-sidebar.open {
+      right: 0;
+    }
+
+    .chat-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(70, 70, 90, 0.5);
+      display: flex;
+      justify-content: between;
+      align-items: center;
+      background-color: rgba(20, 20, 30, 0.8);
+    }
+
+    body:not(.dark-mode) .chat-header {
+      background-color: rgba(230, 230, 230, 0.8);
+    }
+
+    .chat-title {
+      font-size: 1rem;
+      font-weight: 600;
       color: #e0e0e0;
-      backdrop-filter: blur(5px);
+      flex: 1;
     }
 
-    body:not(.dark-mode) .chat-panel {
-      background-color: rgba(248, 249, 250, 0.7);
+    body:not(.dark-mode) .chat-title {
+      color: #333;
     }
 
-    .participants-panel {
-      border-top: 1px solid rgba(70, 70, 90, 0.5);
-      max-height: 150px;
-      overflow-y: auto;
+    .chat-close {
+      background: none;
+      border: none;
+      color: #a0a0a0;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 5px;
+    }
+
+    .chat-close:hover {
+      color: #fff;
+    }
+
+    body:not(.dark-mode) .chat-close:hover {
+      color: #333;
+    }
+
+    .chat-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .participants-list {
@@ -318,21 +443,1066 @@
     .chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 0.5rem;
+      padding: 15px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .chat-input-container {
       display: flex;
-      padding: 0.5rem;
-      border-top: 1px solid var(--ios-gray-4);
+      padding: 15px 20px;
+      border-top: 1px solid rgba(70, 70, 90, 0.5);
+      background-color: rgba(20, 20, 30, 0.8);
+    }
+
+    body:not(.dark-mode) .chat-input-container {
+      background-color: rgba(230, 230, 230, 0.8);
     }
 
     .chat-input {
       flex: 1;
-      border: 1px solid var(--ios-gray-4);
+      border: 1px solid rgba(70, 70, 90, 0.5);
       border-radius: 20px;
-      padding: 0.5rem 1rem;
-      margin-right: 0.5rem;
+      padding: 8px 15px;
+      margin-right: 10px;
+      background-color: rgba(40, 40, 50, 0.8);
+      color: #e0e0e0;
+      outline: none;
+    }
+
+    body:not(.dark-mode) .chat-input {
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #333;
+      border-color: #ccc;
+    }
+
+    .chat-send-btn {
+      background-color: #007aff;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s ease;
+    }
+
+    .chat-send-btn:hover {
+      background-color: #0056cc;
+    }
+
+    /* AI Chat Sidebar (Copilot style) */
+    .ai-chat-sidebar {
+      position: fixed;
+      top: 0;
+      right: -450px;
+      width: 450px;
+      height: 100vh;
+      background-color: rgba(15, 15, 25, 0.98);
+      border-left: 1px solid rgba(70, 70, 90, 0.5);
+      display: flex;
+      flex-direction: column;
+      z-index: 998;
+      transition: right 0.3s ease;
+      backdrop-filter: blur(10px);
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+    }
+
+    body:not(.dark-mode) .ai-chat-sidebar {
+      background-color: rgba(248, 249, 250, 0.98);
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .ai-chat-sidebar.open {
+      right: 0;
+    }
+
+    .ai-chat-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(70, 70, 90, 0.5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #1e1e2e, #2a2a3a);
+    }
+
+    body:not(.dark-mode) .ai-chat-header {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border-bottom-color: rgba(200, 200, 200, 0.5);
+    }
+
+    .ai-chat-title-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-chat-title-container i {
+      color: #007aff;
+      font-size: 1.1rem;
+    }
+
+    .ai-chat-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      margin: 0;
+    }
+
+    body:not(.dark-mode) .ai-chat-title {
+      color: #333;
+    }
+
+    .ai-chat-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ai-model-selector {
+      position: relative;
+    }
+
+    .ai-model-dropdown {
+      background-color: rgba(40, 40, 50, 0.9);
+      border: 1px solid rgba(70, 70, 90, 0.5);
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    body:not(.dark-mode) .ai-model-dropdown {
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #333;
+      border-color: #ccc;
+    }
+
+    .ai-model-dropdown:hover {
+      background-color: rgba(50, 50, 60, 0.9);
+    }
+
+    body:not(.dark-mode) .ai-model-dropdown:hover {
+      background-color: rgba(245, 245, 245, 0.9);
+    }
+
+    .ai-chat-close {
+      background: none;
+      border: none;
+      color: #a0a0a0;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 5px;
+      transition: color 0.2s ease;
+    }
+
+    .ai-chat-close:hover {
+      color: #fff;
+    }
+
+    body:not(.dark-mode) .ai-chat-close:hover {
+      color: #333;
+    }
+
+    .ai-chat-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .ai-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .ai-message {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .ai-message-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+    }
+
+    .ai-message.ai-welcome .ai-message-icon,
+    .ai-message.ai-assistant .ai-message-icon {
+      background: linear-gradient(135deg, #007aff, #0056cc);
+      color: white;
+    }
+
+    .ai-message.user .ai-message-icon {
+      background: linear-gradient(135deg, #34c759, #28a745);
+      color: white;
+    }
+
+    .ai-message-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ai-message-text {
+      background-color: rgba(40, 40, 50, 0.6);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    body:not(.dark-mode) .ai-message-text {
+      background-color: rgba(248, 249, 250, 0.8);
+      color: #333;
+    }
+
+    .ai-message.user .ai-message-text {
+      background-color: rgba(0, 122, 255, 0.1);
+      border: 1px solid rgba(0, 122, 255, 0.2);
+    }
+
+    .ai-message-text ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .ai-message-text li {
+      margin: 4px 0;
+    }
+
+    .ai-message-text code {
+      background-color: rgba(70, 70, 90, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    body:not(.dark-mode) .ai-message-text code {
+      background-color: rgba(220, 220, 220, 0.3);
+    }
+
+    .ai-message-text pre {
+      background-color: rgba(20, 20, 30, 0.8);
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    body:not(.dark-mode) .ai-message-text pre {
+      background-color: rgba(240, 240, 240, 0.8);
+    }
+
+    .ai-chat-actions {
+      display: flex;
+      gap: 8px;
+      padding: 15px 20px;
+      border-top: 1px solid rgba(70, 70, 90, 0.3);
+      border-bottom: 1px solid rgba(70, 70, 90, 0.3);
+      background-color: rgba(25, 25, 35, 0.6);
+      flex-wrap: wrap;
+    }
+
+    body:not(.dark-mode) .ai-chat-actions {
+      background-color: rgba(248, 249, 250, 0.6);
+      border-color: rgba(200, 200, 200, 0.3);
+    }
+
+    .ai-action-btn {
+      background-color: rgba(40, 40, 50, 0.8);
+      border: 1px solid rgba(70, 70, 90, 0.5);
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      justify-content: center;
+      min-width: 80px;
+    }
+
+    body:not(.dark-mode) .ai-action-btn {
+      background-color: rgba(255, 255, 255, 0.8);
+      color: #333;
+      border-color: #ccc;
+    }
+
+    .ai-action-btn:hover {
+      background-color: rgba(60, 60, 70, 0.8);
+      border-color: rgba(100, 100, 120, 0.5);
+      transform: translateY(-1px);
+    }
+
+    body:not(.dark-mode) .ai-action-btn:hover {
+      background-color: rgba(240, 240, 240, 0.8);
+    }
+
+    .ai-action-btn i {
+      font-size: 0.75rem;
+    }
+
+    .ai-chat-input-container {
+      padding: 15px 20px;
+      background-color: rgba(20, 20, 30, 0.8);
+    }
+
+    body:not(.dark-mode) .ai-chat-input-container {
+      background-color: rgba(230, 230, 230, 0.8);
+    }
+
+    .ai-input-wrapper {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .ai-chat-input {
+      flex: 1;
+      border: 1px solid rgba(70, 70, 90, 0.5);
+      border-radius: 12px;
+      padding: 12px 15px;
+      background-color: rgba(40, 40, 50, 0.8);
+      color: #e0e0e0;
+      outline: none;
+      resize: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      max-height: 120px;
+      transition: border-color 0.2s ease;
+    }
+
+    body:not(.dark-mode) .ai-chat-input {
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #333;
+      border-color: #ccc;
+    }
+
+    .ai-chat-input:focus {
+      border-color: #007aff;
+    }
+
+    .ai-chat-input::placeholder {
+      color: #888;
+    }
+
+    .ai-chat-send-btn {
+      background-color: #007aff;
+      border: none;
+      border-radius: 8px;
+      width: 40px;
+      height: 40px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .ai-chat-send-btn:hover {
+      background-color: #0056cc;
+      transform: translateY(-1px);
+    }
+
+    .ai-chat-send-btn:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .ai-input-hint {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 8px;
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* Loading animation for AI responses */
+    .ai-loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #888;
+      font-style: italic;
+    }
+
+    .ai-loading-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .ai-loading-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #007aff;
+      animation: ai-loading-bounce 1.4s infinite ease-in-out both;
+    }
+
+    .ai-loading-dot:nth-child(1) { animation-delay: -0.32s; }
+    .ai-loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes ai-loading-bounce {
+      0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Responsive design for AI chat */
+    @media (max-width: 768px) {
+      .ai-chat-sidebar {
+        width: 100vw;
+        right: -100vw;
+      }
+      
+      .ai-chat-actions {
+        flex-direction: column;
+      }
+      
+      .ai-action-btn {
+        min-width: 100%;
+      }
+    }
+
+
+
+    body:not(.dark-mode) .monaco-editor .suggest-widget .suggest-status-bar {
+      background-color: rgba(240, 240, 240, 0.9) !important;
+    }
+
+    /* AI suggestion indicator */
+    .monaco-editor .suggest-widget .monaco-list .monaco-list-row[aria-label*="AI suggestion"] .suggest-icon {
+      color: #007aff !important;
+    }
+
+    .monaco-editor .suggest-widget .monaco-list .monaco-list-row[aria-label*="AI suggestion"]::before {
+      content: "🤖";
+      margin-right: 4px;
+      font-size: 12px;
+    }
+
+    /* Autocomplete keyboard hint */
+    .autocomplete-hint {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background-color: rgba(0, 122, 255, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .autocomplete-hint.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .autocomplete-hint kbd {
+      background-color: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      font-family: monospace;
+      margin: 0 2px;
+    }
+
+    /* Terminal Sidebar (Bottom slide-in) */
+    .terminal-sidebar {
+      position: fixed;
+      bottom: -400px;
+      left: 0;
+      width: 100%;
+      height: 400px;
+      background-color: rgba(25, 25, 35, 0.98);
+      border-top: 1px solid rgba(70, 70, 90, 0.5);
+      display: flex;
+      flex-direction: column;
+      z-index: 999;
+      transition: bottom 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    body:not(.dark-mode) .terminal-sidebar {
+      background-color: rgba(248, 249, 250, 0.98);
+    }
+
+    .terminal-sidebar.open {
+      bottom: 40px; /* Account for footer height */
+    }
+
+    .terminal-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(70, 70, 90, 0.5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: rgba(20, 20, 30, 0.8);
+      min-height: 50px;
+    }
+
+    body:not(.dark-mode) .terminal-header {
+      background-color: rgba(230, 230, 230, 0.8);
+    }
+
+    .terminal-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      flex: 1;
+      margin: 0;
+    }
+
+    body:not(.dark-mode) .terminal-title {
+      color: #333;
+    }
+
+    .terminal-close {
+      background: none;
+      border: none;
+      color: #a0a0a0;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 5px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .terminal-close:hover {
+      color: #fff;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body:not(.dark-mode) .terminal-close:hover {
+      color: #333;
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .terminal-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .terminal-output {
+      flex: 1;
+      padding: 15px 20px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: #e0e0e0;
+      background-color: rgba(15, 15, 25, 0.8);
+    }
+
+    body:not(.dark-mode) .terminal-output {
+      background-color: rgba(255, 255, 255, 0.8);
+      color: #333;
+    }
+
+    .terminal-line {
+      margin-bottom: 4px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .terminal-input-container {
+      display: flex;
+      align-items: center;
+      padding: 15px 20px;
+      border-top: 1px solid rgba(70, 70, 90, 0.3);
+      background-color: rgba(20, 20, 30, 0.8);
+    }
+
+    body:not(.dark-mode) .terminal-input-container {
+      background-color: rgba(240, 240, 240, 0.8);
+      border-top-color: rgba(200, 200, 200, 0.5);
+    }
+
+    .terminal-prompt {
+      color: #00ff00;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-weight: bold;
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    body:not(.dark-mode) .terminal-prompt {
+      color: #007700;
+    }
+
+    .terminal-input-field {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: #e0e0e0;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9rem;
+      outline: none;
+      padding: 5px 0;
+    }
+
+    body:not(.dark-mode) .terminal-input-field {
+      color: #333;
+    }
+
+    .terminal-input-field::placeholder {
+      color: #666;
+    }
+
+    body:not(.dark-mode) .terminal-input-field::placeholder {
+      color: #999;
+    }
+
+    /* Footer Terminal Panel */
+    .footer-terminal {
+      position: fixed;
+      bottom: 60px; /* Above the footer */
+      left: 0;
+      right: 0;
+      height: 250px;
+      background-color: rgba(25, 25, 35, 0.98);
+      border-top: 1px solid rgba(70, 70, 90, 0.5);
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 800;
+      backdrop-filter: blur(10px);
+      display: none;
+    }
+
+    body:not(.dark-mode) .footer-terminal {
+      background-color: rgba(255, 255, 255, 0.98);
+      border-top-color: rgba(200, 200, 200, 0.5);
+    }
+
+    .footer-terminal.open {
+      transform: translateY(0);
+      display: block;
+    }
+
+    .footer-terminal .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background-color: rgba(20, 20, 30, 0.9);
+      border-bottom: 1px solid rgba(70, 70, 90, 0.3);
+    }
+
+    body:not(.dark-mode) .footer-terminal .terminal-header {
+      background-color: rgba(240, 240, 240, 0.9);
+      border-bottom-color: rgba(200, 200, 200, 0.5);
+    }
+
+    .footer-terminal .terminal-title {
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    body:not(.dark-mode) .footer-terminal .terminal-title {
+      color: #333;
+    }
+
+    .footer-terminal .terminal-close {
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 3px;
+      transition: all 0.2s ease;
+    }
+
+    .footer-terminal .terminal-close:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    body:not(.dark-mode) .footer-terminal .terminal-close:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+      color: #000;
+    }
+
+    .footer-terminal .terminal-content {
+      height: calc(100% - 45px);
+      overflow: hidden;
+    }
+
+    /* Modal Popups */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1001;
+      backdrop-filter: blur(3px);
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-container {
+      background-color: rgba(25, 25, 35, 0.98);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(70, 70, 90, 0.5);
+    }
+
+    body:not(.dark-mode) .modal-container {
+      background-color: rgba(255, 255, 255, 0.98);
+      border-color: #ddd;
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(70, 70, 90, 0.5);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: rgba(20, 20, 30, 0.8);
+    }
+
+    body:not(.dark-mode) .modal-header {
+      background-color: rgba(240, 240, 240, 0.8);
+      border-color: #ddd;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      margin: 0;
+    }
+
+    body:not(.dark-mode) .modal-title {
+      color: #333;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #a0a0a0;
+      cursor: pointer;
+      font-size: 1.3rem;
+      padding: 5px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      color: #fff;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body:not(.dark-mode) .modal-close:hover {
+      color: #333;
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-content {
+      padding: 20px;
+      overflow-y: auto;
+      max-height: calc(80vh - 140px);
+    }
+
+    /* Participants Modal */
+    .participants-count-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      background-color: rgba(40, 40, 50, 0.3);
+      border-radius: 8px;
+      border: 1px solid rgba(70, 70, 90, 0.3);
+      color: #e0e0e0;
+      font-weight: 500;
+    }
+
+    body:not(.dark-mode) .participants-count-display {
+      background-color: rgba(240, 240, 240, 0.8);
+      border-color: #e0e0e0;
+      color: #333;
+    }
+
+    .participants-count-display i {
+      color: var(--ios-primary);
+    }
+
+    .participants-grid {
+      display: grid;
+      gap: 15px;
+    }
+
+    .participant-card {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background-color: rgba(40, 40, 50, 0.5);
+      border-radius: 8px;
+      border: 1px solid rgba(70, 70, 90, 0.3);
+    }
+
+    body:not(.dark-mode) .participant-card {
+      background-color: rgba(250, 250, 250, 0.8);
+      border-color: #e0e0e0;
+    }
+
+    .participant-card-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 15px;
+    }
+
+    .participant-info {
+      flex: 1;
+    }
+
+    .participant-card-name {
+      font-weight: 600;
+      color: #e0e0e0;
+      margin-bottom: 4px;
+    }
+
+    body:not(.dark-mode) .participant-card-name {
+      color: #333;
+    }
+
+    .participant-status {
+      font-size: 0.85rem;
+      color: #a0a0a0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #4caf50;
+    }
+
+    /* Settings Modal */
+    .settings-section {
+      margin-bottom: 25px;
+    }
+
+    .settings-section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    body:not(.dark-mode) .settings-section-title {
+      color: #333;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(70, 70, 90, 0.3);
+    }
+
+    body:not(.dark-mode) .setting-item {
+      border-color: #e0e0e0;
+    }
+
+    .setting-item:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      flex: 1;
+    }
+
+    .setting-name {
+      font-weight: 500;
+      color: #e0e0e0;
+      margin-bottom: 4px;
+    }
+
+    body:not(.dark-mode) .setting-name {
+      color: #333;
+    }
+
+    .setting-description {
+      font-size: 0.85rem;
+      color: #a0a0a0;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(70, 70, 90, 0.5);
+      transition: .4s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #007aff;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(26px);
+    }
+
+    /* Theme Selector */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .theme-option {
+      padding: 12px;
+      border: 2px solid rgba(70, 70, 90, 0.3);
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      background-color: rgba(40, 40, 50, 0.3);
+    }
+
+    body:not(.dark-mode) .theme-option {
+      background-color: rgba(250, 250, 250, 0.5);
+      border-color: #e0e0e0;
+    }
+
+    .theme-option:hover {
+      border-color: #007aff;
+    }
+
+    .theme-option.active {
+      border-color: #007aff;
+      background-color: rgba(0, 122, 255, 0.1);
+    }
+
+    .theme-preview {
+      width: 100%;
+      height: 30px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      display: flex;
+    }
+
+    .theme-preview.vs-dark {
+      background: linear-gradient(90deg, #1e1e1e 0%, #252526 100%);
+    }
+
+    .theme-preview.vs-light {
+      background: linear-gradient(90deg, #ffffff 0%, #f3f3f3 100%);
+    }
+
+    .theme-preview.github-dark {
+      background: linear-gradient(90deg, #0d1117 0%, #21262d 100%);
+    }
+
+    .theme-preview.github-light {
+      background: linear-gradient(90deg, #ffffff 0%, #f6f8fa 100%);
+    }
+
+    .theme-preview.monokai {
+      background: linear-gradient(90deg, #272822 0%, #3e3d32 100%);
+    }
+
+    .theme-name {
+      font-size: 0.85rem;
+      color: #e0e0e0;
+      font-weight: 500;
+    }
+
+    body:not(.dark-mode) .theme-name {
+      color: #333;
     }
 
     .message {
@@ -446,12 +1616,31 @@
         width: 200px;
       }
 
-      .chat-panel {
-        width: 250px;
+      .chat-sidebar {
+        width: 100%;
+        right: -100%;
       }
 
-      .sidebar {
-        width: 200px;
+      .modal-container {
+        width: 95%;
+        margin: 20px;
+      }
+
+      .footer-section {
+        padding: 0 10px;
+      }
+
+      .footer-left {
+        font-size: 0.8rem;
+      }
+
+      .footer-btn {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+      }
+
+      .theme-grid {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
 
@@ -462,25 +1651,89 @@
 
       .sidebar {
         width: 100%;
-        height: auto;
-        max-height: 150px;
+        height: 120px;
         border-right: none;
-        border-bottom: 1px solid var(--ios-gray-4);
+        border-bottom: 1px solid rgba(70, 70, 90, 0.5);
+        flex-direction: row;
+        overflow-x: auto;
+      }
+
+      .files-list {
+        display: flex;
+        flex-direction: row;
+        white-space: nowrap;
+      }
+
+      .files-list li {
+        border-right: 1px solid rgba(70, 70, 90, 0.3);
+        border-bottom: none;
+        min-width: 120px;
       }
 
       .bottom-panel {
-        flex-direction: column;
-        height: auto;
+        height: 200px;
       }
 
-      .terminal, .chat-panel {
+      .chat-sidebar {
         width: 100%;
-        height: 150px;
+        right: -100%;
       }
 
-      .chat-panel {
-        border-left: none;
-        border-top: 1px solid var(--ios-gray-4);
+      .footer-section {
+        flex-direction: column;
+        height: 60px;
+        padding: 5px 10px;
+      }
+
+      .footer-left, .footer-right {
+        justify-content: center;
+      }
+
+      .footer-left {
+        margin-bottom: 5px;
+      }
+
+      .footer-btn {
+        padding: 4px 6px;
+        font-size: 0.75rem;
+        gap: 4px;
+      }
+
+      .modal-container {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        margin: 0;
+      }
+
+      .theme-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-section {
+        margin-bottom: 20px;
+      }
+
+      .terminal-sidebar {
+        height: 350px;
+      }
+
+      .terminal-sidebar.open {
+        bottom: 40px; /* Account for mobile footer */
+      }
+
+      .terminal-output {
+        font-size: 0.85rem;
+        padding: 10px 15px;
+      }
+
+      .terminal-input-container {
+        padding: 10px 15px;
+      }
+
+      .terminal-header {
+        padding: 10px 15px;
+        min-height: 45px;
       }
     }
 
@@ -504,62 +1757,225 @@
       padding: 0.5rem;
     }
 
-    /* Simple notification popup - bottom right */
-    .mode-notification {
+    /* Professional notification side popup */
+    .notification-container {
       position: fixed;
-      bottom: 20px;
+      top: 20px;
       right: 20px;
-      background: #333;
+      z-index: 10000;
+      width: 350px;
+      max-width: 90vw;
+      pointer-events: none;
+    }
+
+    .notification-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transform: translateX(100%);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body.dark-mode .notification-item {
+      background: rgba(30, 30, 35, 0.95);
+      border-color: rgba(70, 70, 90, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .notification-item.show {
+      transform: translateX(0);
+    }
+
+    .notification-item.fade-out {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+
+    .notification-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 600;
       color: white;
-      padding: 12px 16px;
-      border-radius: 6px;
+    }
+
+    .notification-item.success .notification-icon {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .notification-item.error .notification-icon {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .notification-item.info .notification-icon {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+
+    .notification-item.warning .notification-icon {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .notification-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notification-title {
+      font-weight: 600;
       font-size: 14px;
-      z-index: 9999;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      animation: slideUp 0.3s ease-out;
-      max-width: 300px;
+      color: #1f2937;
+      margin-bottom: 4px;
+      line-height: 1.3;
     }
 
-    .mode-notification.success {
-      background: #22c55e;
+    body.dark-mode .notification-title {
+      color: #f9fafb;
     }
 
-    .mode-notification.error {
-      background: #ef4444;
+    .notification-message {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.4;
+      word-wrap: break-word;
     }
 
-    .mode-notification.info {
-      background: #3b82f6;
+    body.dark-mode .notification-message {
+      color: #d1d5db;
     }
 
-    .mode-notification.warning {
-      background: #f59e0b;
+    .notification-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: none;
+      color: #9ca3af;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 12px;
+      transition: all 0.2s ease;
+      opacity: 0;
+      pointer-events: none;
     }
 
-    @keyframes slideUp {
-      from {
-        transform: translateY(100%);
-        opacity: 0;
+    .notification-item:hover .notification-close {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .notification-close:hover {
+      background: rgba(156, 163, 175, 0.2);
+      color: #374151;
+    }
+
+    body.dark-mode .notification-close:hover {
+      background: rgba(156, 163, 175, 0.1);
+      color: #f3f4f6;
+    }
+
+    .notification-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+      border-radius: 0 0 12px 12px;
+      transform-origin: left;
+      animation: progressBar 4s linear forwards;
+    }
+
+    .notification-item.success .notification-progress {
+      background: linear-gradient(90deg, #10b981, #059669);
+    }
+
+    .notification-item.error .notification-progress {
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+
+    .notification-item.warning .notification-progress {
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+    }
+
+    @keyframes progressBar {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+      .notification-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: auto;
       }
-      to {
-        transform: translateY(0);
-        opacity: 1;
+      
+      .notification-item {
+        margin-bottom: 8px;
+        padding: 12px 16px;
       }
     }
 
-    @keyframes slideDown {
-      from {
-        transform: translateY(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateY(100%);
-        opacity: 0;
-      }
+    /* Accessibility and keyboard navigation */
+    .footer-btn:focus,
+    .modal-close:focus,
+    .chat-close:focus {
+      outline: 2px solid #007aff;
+      outline-offset: 2px;
     }
 
-    .mode-notification.fade-out {
-      animation: slideDown 0.3s ease-in forwards;
+    .toggle-switch:focus-within {
+      outline: 2px solid #007aff;
+      outline-offset: 2px;
+      border-radius: 24px;
+    }
+
+    .theme-option:focus {
+      outline: 2px solid #007aff;
+      outline-offset: 2px;
+    }
+
+    /* Smooth animations */
+    .chat-sidebar,
+    .modal-overlay,
+    .footer-btn,
+    .theme-option,
+    .setting-item {
+      transition: all 0.2s ease;
+    }
+
+    /* Chat sidebar overlay for mobile */
+    @media (max-width: 768px) {
+      .chat-sidebar.open::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+      }
     }
   </style>
 </head>
@@ -673,49 +2089,360 @@
       </div>
     </div>
 
-    <!-- Bottom Panel -->
-    <div class="bottom-panel">
-      <!-- Terminal Output -->
-      <div class="terminal" id="terminal">
-        > Welcome to CodeCollab Terminal
-        > Run your code to see output here...
+    <!-- Footer Section -->
+    <div class="footer-section">
+      <div class="footer-left">
+        <span><i class="fas fa-users"></i> <span id="online-count">1</span> online</span>
+        <span><i class="fas fa-code"></i> <%= roomData.language %></span>
+      </div>
+      <div class="footer-right">
+        <button class="footer-btn" id="footer-chat-btn">
+          <i class="fas fa-comments"></i>
+          Chat
+        </button>
+        <button class="footer-btn" id="footer-ai-chat-btn">
+          <i class="fas fa-robot"></i>
+          AI Chat
+        </button>
+        <button class="footer-btn" id="footer-participants-btn">
+          <i class="fas fa-users"></i>
+          Participants
+        </button>
+        <button class="footer-btn" id="footer-settings-btn">
+          <i class="fas fa-cog"></i>
+          Settings
+        </button>
+        <button class="footer-btn" id="footer-terminal-btn">
+          <i class="fas fa-terminal"></i>
+          Terminal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Terminal Panel -->
+  <div class="footer-terminal" id="footer-terminal">
+    <div class="terminal-header">
+      <h6 class="terminal-title">Output Terminal</h6>
+      <button class="terminal-close" id="footer-terminal-close">
+        <i class="fas fa-minus"></i>
+      </button>
+    </div>
+    <div class="terminal-content">
+      <div class="terminal-output" id="terminal" style="height: 200px; overflow-y: auto; background: #1e1e1e; color: #ffffff; padding: 10px; font-family: 'Courier New', monospace; border-radius: 4px;">
+        <div class="terminal-line" style="color: #4a9eff;">CodeCollab Output Terminal v1.0</div>
+        <div class="terminal-line" style="color: #6b7280;">Code execution results will appear here...</div>
         <div class="terminal-input">
           <span class="terminal-input-prompt">$</span>
           <input type="text" class="terminal-input-field" id="terminal-input" placeholder="Enter bash command..." spellcheck="false">
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Chat Panel -->
-      <div class="chat-panel">
-        <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-          <h6 class="mb-0 text-light">Chat</h6>
-          <button class="collapse-btn text-light" id="collapse-chat">
-            <i class="fas fa-chevron-right"></i>
-          </button>
+  <!-- Chat Sidebar (VS Code style) -->
+  <div class="chat-sidebar" id="chat-sidebar">
+    <div class="chat-header">
+      <h6 class="chat-title">Chat</h6>
+      <button class="chat-close" id="chat-close-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="chat-content">
+      <div class="chat-messages" id="chat-messages">
+        <!-- Messages will be added here dynamically -->
+      </div>
+      <div class="chat-input-container">
+        <input type="text" class="chat-input" id="chat-input" placeholder="Type a message...">
+        <button class="chat-send-btn" id="send-message">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Chat Sidebar (Copilot style) -->
+  <div class="ai-chat-sidebar" id="ai-chat-sidebar">
+    <div class="ai-chat-header">
+      <div class="ai-chat-title-container">
+        <i class="fas fa-robot"></i>
+        <h6 class="ai-chat-title">AI Assistant</h6>
+      </div>
+      <div class="ai-chat-controls">
+        <div class="ai-model-selector">
+          <select id="ai-model-select" class="ai-model-dropdown">
+            <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+            <option value="gemini-1.0-pro">Gemini 1.0 Pro</option>
+          </select>
         </div>
-        <div class="chat-messages d-flex flex-column" id="chat-messages">
-          <!-- Messages will be added here dynamically -->
+        <button class="ai-chat-close" id="ai-chat-close-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    <div class="ai-chat-content">
+      <div class="ai-chat-messages" id="ai-chat-messages">
+        <div class="ai-message ai-welcome">
+          <div class="ai-message-icon">
+            <i class="fas fa-robot"></i>
+          </div>
+          <div class="ai-message-content">
+            <div class="ai-message-text">
+              👋 Hi! I'm your AI coding assistant. I can help you with:
+              <ul>
+                <li>🐛 Debug your code</li>
+                <li>💡 Explain code concepts</li>
+                <li>⚡ Optimize performance</li>
+                <li>📝 Write code snippets</li>
+                <li>🔍 Code reviews</li>
+              </ul>
+              Ask me anything about your code!
+            </div>
+          </div>
         </div>
-        <div class="chat-input-container">
-          <input type="text" class="chat-input" id="chat-input" placeholder="Type a message...">
-          <button class="btn btn-sm btn-primary" id="send-message">
+      </div>
+      <div class="ai-chat-actions">
+        <button class="ai-action-btn" id="ai-analyze-code" title="Analyze current code">
+          <i class="fas fa-search"></i>
+          Analyze Code
+        </button>
+        <button class="ai-action-btn" id="ai-debug-code" title="Debug current code">
+          <i class="fas fa-bug"></i>
+          Debug
+        </button>
+        <button class="ai-action-btn" id="ai-optimize-code" title="Optimize current code">
+          <i class="fas fa-bolt"></i>
+          Optimize
+        </button>
+        <button class="ai-action-btn" id="ai-explain-code" title="Explain current code">
+          <i class="fas fa-question-circle"></i>
+          Explain
+        </button>
+      </div>
+      <div class="ai-chat-input-container">
+        <div class="ai-input-wrapper">
+          <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Ask me about your code..." rows="1"></textarea>
+          <button class="ai-chat-send-btn" id="ai-send-message">
             <i class="fas fa-paper-plane"></i>
           </button>
         </div>
-        <!-- Participants Panel -->
-        <div class="participants-panel">
-          <div class="d-flex justify-content-between align-items-center p-2">
-            <h6 class="mb-0 text-light">Participants</h6>
-            <span class="badge bg-primary rounded-pill" id="participants-count">1</span>
+        <div class="ai-input-hint">
+          💡 Tip: Select code in the editor and ask specific questions
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Professional Notification Container -->
+  <div class="notification-container" id="notification-container">
+    <!-- Notifications will be dynamically added here -->
+  </div>
+
+  <!-- Terminal Sidebar (Bottom slide-in) -->
+  <div class="terminal-sidebar" id="terminal-sidebar">
+    <div class="terminal-header">
+      <h6 class="terminal-title">Terminal</h6>
+      <button class="terminal-close" id="terminal-close-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="terminal-content">
+      <div class="terminal-output" id="terminal-output">
+        <div class="terminal-line">CodeCollab Terminal v1.0</div>
+        <div class="terminal-line">Type your bash commands below:</div>
+      </div>
+      <div class="terminal-input-container">
+        <span class="terminal-prompt">$ </span>
+        <input type="text" class="terminal-input-field" id="terminal-input-sidebar" placeholder="Enter command..." spellcheck="false" autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <!-- Participants Modal -->
+  <div class="modal-overlay" id="participants-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Participants</h3>
+        <button class="modal-close" id="participants-close-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <div class="participants-count-display">
+          <i class="fas fa-users"></i>
+          <span id="participants-count">1</span> participant(s) online
+        </div>
+        <div class="participants-grid" id="participants-grid">
+          <!-- Current user - added for consistency -->
+          <div class="participant-card" id="participant-card-<%= req.user._id || req.user.id || req.user.googleId %>">
+            <img src="<%= req.user.picture || 'https://ui-avatars.com/api/?name=' + req.user.username %>" alt="Your avatar" class="participant-card-avatar">
+            <div class="participant-info">
+              <div class="participant-card-name"><%= req.user.username || req.user.displayName || req.user.email.split("@")[0] %> (You)</div>
+              <div class="participant-status">
+                <div class="status-indicator"></div>
+                Online
+              </div>
+            </div>
           </div>
-          <ul class="participants-list" id="participants-list">
-            <!-- Current user - added with ID for consistency -->
-            <li class="participant-item" id="participant-<%= req.user._id || req.user.id || req.user.googleId %>">
-              <img src="<%= req.user.picture || 'https://ui-avatars.com/api/?name=' + req.user.username %>" alt="Your avatar" class="participant-avatar">
-              <span class="participant-name"><%= req.user.username || req.user.displayName || req.user.email.split("@")[0] %> (You)</span>
-              <div class="participant-color" style="background-color: #007aff;"></div>
-            </li>
-          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Settings</h3>
+        <button class="modal-close" id="settings-close-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <!-- Editor Settings -->
+        <div class="settings-section">
+          <h4 class="settings-section-title">
+            <i class="fas fa-edit"></i>
+            Editor
+          </h4>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Show Remote Cursors</div>
+              <div class="setting-description">Display cursors of other participants</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-show-cursors" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Auto Save</div>
+              <div class="setting-description">Automatically save changes</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-auto-save" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Line Numbers</div>
+              <div class="setting-description">Show line numbers in editor</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-line-numbers" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Minimap</div>
+              <div class="setting-description">Show code minimap</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-minimap" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Theme Settings -->
+        <div class="settings-section">
+          <h4 class="settings-section-title">
+            <i class="fas fa-palette"></i>
+            Theme
+          </h4>
+          <div class="theme-grid">
+            <div class="theme-option active" data-theme="vs-dark">
+              <div class="theme-preview vs-dark"></div>
+              <div class="theme-name">VS Dark</div>
+            </div>
+            <div class="theme-option" data-theme="vs-light">
+              <div class="theme-preview vs-light"></div>
+              <div class="theme-name">VS Light</div>
+            </div>
+            <div class="theme-option" data-theme="github-dark">
+              <div class="theme-preview github-dark"></div>
+              <div class="theme-name">GitHub Dark</div>
+            </div>
+            <div class="theme-option" data-theme="github-light">
+              <div class="theme-preview github-light"></div>
+              <div class="theme-name">GitHub Light</div>
+            </div>
+            <div class="theme-option" data-theme="monokai">
+              <div class="theme-preview monokai"></div>
+              <div class="theme-name">Monokai</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collaboration Settings -->
+        <div class="settings-section">
+          <h4 class="settings-section-title">
+            <i class="fas fa-users"></i>
+            Collaboration
+          </h4>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Real-time Sync</div>
+              <div class="setting-description">Sync code changes in real-time</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-realtime-sync" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Chat Notifications</div>
+              <div class="setting-description">Show notifications for new messages</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-chat-notifications" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Join/Leave Alerts</div>
+              <div class="setting-description">Show when users join or leave</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-join-alerts" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Performance Settings -->
+        <div class="settings-section">
+          <h4 class="settings-section-title">
+            <i class="fas fa-tachometer-alt"></i>
+            Performance
+          </h4>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Performance Mode</div>
+              <div class="setting-description">Disable animations and effects</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-performance-mode">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <div class="setting-label">
+              <div class="setting-name">Auto Complete</div>
+              <div class="setting-description">Enable code auto-completion</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-auto-complete" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -771,6 +2498,11 @@
     // Flag to track local typing to prevent cursor conflicts
     let isLocalTyping = false;
 
+    // AI Chat variables
+    let currentAIModel = 'gemini-2.0-flash-exp';
+    let aiConversationHistory = [];
+    let isAIResponding = false;
+
     // Initialize Socket.IO connection
     function initializeSocket() {
       socket = io({
@@ -804,8 +2536,11 @@
       // Room events
       socket.on('user_joined', (data) => {
         console.log('User joined:', data);
-        document.getElementById('online-count').textContent = data.userCount || 1;
-        document.getElementById('participants-count').textContent = data.userCount || 1;
+        const onlineCountEl = document.getElementById('online-count');
+        const participantsCountEl = document.getElementById('participants-count');
+        
+        if (onlineCountEl) onlineCountEl.textContent = data.userCount || 1;
+        if (participantsCountEl) participantsCountEl.textContent = data.userCount || 1;
 
         // Only add to UI if it's not the current user
         if (data.userId !== userId) {
@@ -840,8 +2575,11 @@
 
       socket.on('user_left', (data) => {
         console.log('User left:', data);
-        document.getElementById('online-count').textContent = data.userCount || 1;
-        document.getElementById('participants-count').textContent = data.userCount || 1;
+        const onlineCountEl = document.getElementById('online-count');
+        const participantsCountEl = document.getElementById('participants-count');
+        
+        if (onlineCountEl) onlineCountEl.textContent = data.userCount || 1;
+        if (participantsCountEl) participantsCountEl.textContent = data.userCount || 1;
 
         // Remove user avatar from the list
         removeRemoteAvatar(data.userId);
@@ -921,6 +2659,13 @@
       // Run code results
       socket.on('code_result', (data) => {
         displayCodeResult(data);
+        
+        // Re-enable run button
+        const runCodeBtn = document.getElementById('run-code');
+        if (runCodeBtn) {
+          runCodeBtn.disabled = false;
+          runCodeBtn.innerHTML = '<i class="fas fa-play"></i> Run';
+        }
       });
 
       // New file created by another user
@@ -970,6 +2715,7 @@
 
       // Bash command result
       socket.on('bash_result', (data) => {
+        // Update main terminal (existing functionality)
         const terminal = document.getElementById('terminal');
         const inputDiv = terminal.querySelector('.terminal-input');
 
@@ -991,12 +2737,406 @@
           <input type="text" class="terminal-input-field" id="terminal-input" placeholder="Enter bash command...">
         </div>`;
 
+        // Update terminal sidebar as well
+        const terminalOutput = document.getElementById('terminal-output');
+        if (terminalOutput) {
+          const resultLine = document.createElement('div');
+          resultLine.className = 'terminal-line';
+          
+          if (data.error) {
+            resultLine.style.color = '#ff5252';
+            resultLine.textContent = data.error;
+          } else if (data.result) {
+            resultLine.style.color = '#e0e0e0';
+            resultLine.textContent = data.result;
+          }
+          
+          terminalOutput.appendChild(resultLine);
+          
+          // Scroll to bottom
+          terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
         // Reattach event listener to new terminal input
         document.getElementById('terminal-input').addEventListener('keydown', handleTerminalInput);
 
         // Scroll terminal to bottom
         terminal.scrollTop = terminal.scrollHeight;
       });
+    }
+
+    // Initialize editors with priority fallback approach
+    function initializeEditor() {
+  console.log('Initializing Monaco Editor...');
+
+      // Register completion provider for all languages
+      const languages = ['javascript', 'typescript', 'python', 'java', 'cpp', 'csharp', 'php', 'ruby', 'go', 'rust', 'html', 'css'];
+      
+      languages.forEach(language => {
+        monaco.languages.registerCompletionItemProvider(language, {
+          triggerCharacters: ['.', ' ', '(', '{', '[', '\n', '_', '-'],
+          provideCompletionItems: async function (model, position) {
+            try {
+              const word = model.getWordUntilPosition(position);
+              const range = {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: word.startColumn,
+                endColumn: word.endColumn
+              };
+
+              // Get context around the cursor (more context for better AI suggestions)
+              const startLine = Math.max(1, position.lineNumber - 10);
+              const endLine = Math.min(model.getLineCount(), position.lineNumber + 3);
+              const contextLines = [];
+              
+              for (let i = startLine; i <= endLine; i++) {
+                contextLines.push(model.getLineContent(i));
+              }
+              
+              const context = contextLines.join('\n');
+              const currentLine = model.getLineContent(position.lineNumber);
+              const textBeforeCursor = currentLine.substring(0, position.column - 1);
+              const fullCode = model.getValue();
+              
+              // Check if user typed 1-4 words (better trigger for AI)
+              const words = textBeforeCursor.trim().split(/\s+/);
+              const lastWord = word.word || '';
+              const isShortInput = words.length <= 4 && lastWord.length >= 1;
+              
+              // More aggressive caching for better performance
+              const cacheKey = `${language}-${textBeforeCursor.trim()}-${fullCode.slice(-200)}`;
+              
+              // Check cache first
+              if (autocompleteCache.has(cacheKey)) {
+                return autocompleteCache.get(cacheKey);
+              }
+
+              // For very short inputs or common patterns, provide immediate suggestions
+              if (lastWord.length >= 1 && lastWord.length <= 4) {
+                // Debounce requests for short inputs (faster response)
+                if (lastRequest) {
+                  clearTimeout(lastRequest);
+                }
+
+                return new Promise((resolve) => {
+                  lastRequest = setTimeout(async () => {
+                    try {
+                      if (isAutocompleting) {
+                        resolve({ suggestions: [] });
+                        return;
+                      }
+
+                      isAutocompleting = true;
+
+                      // Show a loading indicator for AI suggestions
+                      showAILoadingIndicator(true);
+
+                      const response = await fetch('/api/ai-autocomplete', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          language: language,
+                          context: context,
+                          currentLine: currentLine,
+                          cursorPosition: position.column - 1,
+                          textBeforeCursor: textBeforeCursor,
+                          fullCode: fullCode.length > 2000 ? fullCode.slice(-2000) : fullCode, // Send last 2000 chars for context
+                          isShortInput: isShortInput,
+                          wordCount: words.length
+                        })
+                      });
+
+                      showAILoadingIndicator(false);
+
+                      if (!response.ok) {
+                        resolve({ suggestions: [] });
+                        return;
+                      }
+
+                      const data = await response.json();
+                      const suggestions = data.suggestions || [];
+
+                      // Format suggestions for Monaco with enhanced priority for AI suggestions
+                      const monacoSuggestions = suggestions.map((suggestion, index) => ({
+                        label: suggestion.label || suggestion.text,
+                        kind: getCompletionKind(suggestion.type || 'snippet'),
+                        documentation: {
+                          value: `🤖 **AI Suggestion**\n\n${suggestion.documentation || suggestion.description || 'Intelligent code completion'}`,
+                          isTrusted: true
+                        },
+                        insertText: suggestion.insertText || suggestion.text,
+                        range: range,
+                        sortText: `0000${index}`, // High priority for AI suggestions
+                        detail: `🤖 ${suggestion.detail || 'AI Completion'}`,
+                        preselect: index === 0, // Preselect first AI suggestion
+                        command: {
+                          id: 'ai-autocomplete-accepted',
+                          title: 'AI Autocomplete Accepted'
+                        }
+                      }));
+
+                      // Add some common code patterns if AI didn't provide many suggestions
+                      if (monacoSuggestions.length < 3 && isShortInput) {
+                        const commonPatterns = getCommonPatterns(language, textBeforeCursor, lastWord);
+                        monacoSuggestions.push(...commonPatterns);
+                      }
+
+                      // Cache the result
+                      autocompleteCache.set(cacheKey, { suggestions: monacoSuggestions });
+                      
+                      // Clear old cache entries (keep only last 100 for better performance)
+                      if (autocompleteCache.size > 100) {
+                        const firstKey = autocompleteCache.keys().next().value;
+                        autocompleteCache.delete(firstKey);
+                      }
+
+                      resolve({ suggestions: monacoSuggestions });
+                    } catch (error) {
+                      console.error('AI autocomplete error:', error);
+                      resolve({ suggestions: [] });
+                    } finally {
+                      isAutocompleting = false;
+                      showAILoadingIndicator(false);
+                    }
+                  }, isShortInput ? 150 : 300); // Faster response for short inputs
+                });
+              }
+
+              // For longer inputs, use standard autocomplete with longer debounce
+              return { suggestions: [] };
+            } catch (error) {
+              console.error('Autocomplete provider error:', error);
+              return { suggestions: [] };
+            }
+          }
+        });
+      });
+
+      // Helper function to get common patterns based on language and context
+      function getCommonPatterns(language, textBeforeCursor, lastWord) {
+        const patterns = [];
+        
+        if (language === 'javascript' || language === 'typescript') {
+          if (lastWord.toLowerCase().includes('func') || lastWord.toLowerCase().includes('fn')) {
+            patterns.push({
+              label: 'function declaration',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'function ${1:functionName}(${2:parameters}) {\n\t${3:// function body}\n\treturn ${4:value};\n}',
+              documentation: 'Create a function declaration',
+              detail: '📝 Common Pattern'
+            });
+          }
+          
+          if (lastWord.toLowerCase().includes('const') || lastWord.toLowerCase().includes('let')) {
+            patterns.push({
+              label: 'arrow function',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: ' = (${1:params}) => {\n\t${2:// function body}\n\treturn ${3:value};\n};',
+              documentation: 'Create an arrow function',
+              detail: '📝 Common Pattern'
+            });
+          }
+          
+          if (lastWord.toLowerCase().includes('if')) {
+            patterns.push({
+              label: 'if statement',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'if (${1:condition}) {\n\t${2:// code block}\n}',
+              documentation: 'Create an if statement',
+              detail: '📝 Common Pattern'
+            });
+          }
+        } else if (language === 'python') {
+          if (lastWord.toLowerCase().includes('def')) {
+            patterns.push({
+              label: 'function definition',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'def ${1:function_name}(${2:parameters}):\n    """${3:docstring}"""\n    ${4:pass}',
+              documentation: 'Create a Python function',
+              detail: '📝 Common Pattern'
+            });
+          }
+          
+          if (lastWord.toLowerCase().includes('class')) {
+            patterns.push({
+              label: 'class definition',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'class ${1:ClassName}:\n    """${2:docstring}"""\n    \n    def __init__(self, ${3:parameters}):\n        ${4:pass}',
+              documentation: 'Create a Python class',
+              detail: '📝 Common Pattern'
+            });
+          }
+        }
+        
+        return patterns;
+      }
+
+      // Helper function to map suggestion types to Monaco completion kinds
+      function getCompletionKind(type) {
+        const kindMap = {
+          'method': monaco.languages.CompletionItemKind.Method,
+          'function': monaco.languages.CompletionItemKind.Function,
+          'class': monaco.languages.CompletionItemKind.Class,
+          'variable': monaco.languages.CompletionItemKind.Variable,
+          'property': monaco.languages.CompletionItemKind.Property,
+          'keyword': monaco.languages.CompletionItemKind.Keyword,
+          'snippet': monaco.languages.CompletionItemKind.Snippet,
+          'text': monaco.languages.CompletionItemKind.Text,
+          'module': monaco.languages.CompletionItemKind.Module,
+          'constant': monaco.languages.CompletionItemKind.Constant,
+          'enum': monaco.languages.CompletionItemKind.Enum,
+          'interface': monaco.languages.CompletionItemKind.Interface
+        };
+        return kindMap[type] || monaco.languages.CompletionItemKind.Text;
+      }
+
+      // AI loading indicator
+      function showAILoadingIndicator(show) {
+        let indicator = document.getElementById('ai-loading-indicator');
+        if (!indicator) {
+          indicator = document.createElement('div');
+          indicator.id = 'ai-loading-indicator';
+          indicator.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 122, 255, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 10000;
+            display: none;
+            animation: pulse 1.5s infinite;
+          `;
+          indicator.innerHTML = '🤖 AI thinking...';
+          document.body.appendChild(indicator);
+        }
+        indicator.style.display = show ? 'block' : 'none';
+      }
+
+      // Enhanced Tab key behavior for accepting AI suggestions
+      editor.addCommand(monaco.KeyCode.Tab, function() {
+        console.log('Tab key pressed for AI autocomplete');
+        const suggestController = editor.getContribution('editor.contrib.suggestController');
+        
+        console.log('Suggest controller:', suggestController);
+        
+        // Check if suggestion widget is open and visible
+        if (suggestController && 
+            suggestController.widget && 
+            suggestController.widget.value && 
+            suggestController.widget.value.state === 1) {
+          
+          console.log('Accepting selected suggestion with Tab');
+          // Accept the currently selected suggestion
+          suggestController.acceptSelectedSuggestion(false, true);
+          return null; // Prevent default tab behavior
+        }
+        
+        // If no suggestions are visible, trigger them and try to accept
+        if (suggestController) {
+          console.log('No suggestions visible, triggering and accepting first suggestion');
+          
+          // Get current word to check if we should trigger AI
+          const position = editor.getPosition();
+          const word = editor.getModel().getWordUntilPosition(position);
+          const currentLine = editor.getModel().getLineContent(position.lineNumber);
+          const textBeforeCursor = currentLine.substring(0, position.column - 1);
+          
+          // Only trigger AI if we have some text to work with
+          if (word.word && word.word.length >= 1) {
+            console.log('Triggering AI suggestions for word:', word.word);
+            suggestController.triggerSuggest();
+            
+            // Try multiple times to catch the suggestions
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            const tryAcceptSuggestion = () => {
+              attempts++;
+              console.log(`Attempt ${attempts} to accept suggestion`);
+              
+              if (suggestController.widget && 
+                  suggestController.widget.value && 
+                  suggestController.widget.value.state === 1) {
+                console.log('Found suggestions, accepting first one');
+                suggestController.acceptSelectedSuggestion(false, true);
+                return;
+              }
+              
+              if (attempts < maxAttempts) {
+                setTimeout(tryAcceptSuggestion, 100);
+              } else {
+                console.log('No suggestions found after multiple attempts, inserting tab');
+                editor.trigger('keyboard', 'tab', null);
+              }
+            };
+            
+            // Start trying to accept suggestions after a brief delay
+            setTimeout(tryAcceptSuggestion, 50);
+            return null; // Prevent default tab behavior
+          }
+        }
+        
+        console.log('No word to complete, inserting regular tab');
+        // No word to complete, insert regular tab
+        editor.trigger('keyboard', 'tab', null);
+      });
+
+      // Add Ctrl+Space as an alternative trigger for AI suggestions
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Space, function() {
+        const suggestController = editor.getContribution('editor.contrib.suggestController');
+        if (suggestController) {
+          suggestController.triggerSuggest();
+        }
+      });
+
+      // Add visual indicator for AI suggestions
+      editor.addAction({
+        id: 'trigger-ai-autocomplete',
+        label: 'Trigger AI Autocomplete',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK],
+        run: function() {
+          const suggestController = editor.getContribution('editor.contrib.suggestController');
+          if (suggestController) {
+            suggestController.triggerSuggest();
+            showNotification('AI autocomplete triggered! Press Tab to accept suggestions.', 'info', 2000);
+          }
+        }
+      });
+
+      // Add visual indicator for AI suggestions
+      editor.addAction({
+        id: 'toggle-ai-autocomplete',
+        label: 'Toggle AI Autocomplete',
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI],
+        run: function() {
+          const isEnabled = editor.getOption(monaco.editor.EditorOption.suggest);
+          editor.updateOptions({ 
+            suggest: { 
+              ...isEnabled,
+              showMethods: !isEnabled.showMethods,
+              showFunctions: !isEnabled.showFunctions,
+              showKeywords: !isEnabled.showKeywords
+            }
+          });
+          showNotification(
+            `AI Autocomplete ${!isEnabled.showMethods ? 'enabled' : 'disabled'}`, 
+            'info'
+          );
+        }
+      });
+
+      console.log('AI Autocomplete setup completed');
+      
+      // Show user instruction for AI autocomplete
+      setTimeout(() => {
+        showNotification('💡 AI Autocomplete: Type 1-4 words, press Tab to complete or Enter to accept first suggestion!', 'info', 6000);
+      }, 2000);
     }
 
     // Initialize editors with priority fallback approach
@@ -1032,7 +3172,63 @@
           theme: document.body.classList.contains('dark-mode') ? 'vs-dark' : 'vs',
           automaticLayout: true,
           fontSize: 14,
-          minimap: { enabled: true }
+          minimap: { enabled: true },
+          // Enhanced autocomplete configuration
+          suggest: {
+            showMethods: true,
+            showFunctions: true,
+            showKeywords: true,
+            showVariables: true,
+            showClasses: true,
+            showProperties: true,
+            showModules: true,
+            showSnippets: true,
+            showConstants: true,
+            showEnums: true,
+            showInterfaces: true,
+            insertMode: 'replace',
+            filterGraceful: true,
+            snippetsPreventQuickSuggestions: false,
+            localityBonus: true,
+            shareSuggestSelections: true,
+            showWords: false, // Disable word-based suggestions to prioritize AI
+            preview: true,
+            previewMode: 'prefix'
+          },
+          quickSuggestions: {
+            other: true,
+            comments: false,
+            strings: false
+          },
+          suggestOnTriggerCharacters: true,
+          acceptSuggestionOnCommitCharacter: true,
+          acceptSuggestionOnEnter: 'on',
+          tabCompletion: 'on',
+          wordBasedSuggestions: false, // Disable to prioritize AI suggestions
+          parameterHints: {
+            enabled: true,
+            cycle: true
+          },
+          // Enable IntelliSense features
+          hover: {
+            enabled: true,
+            delay: 300,
+            sticky: true
+          },
+          lightbulb: {
+            enabled: true
+          },
+          // Enhanced keyboard support for suggestions
+          tabIndex: 0,
+          selectOnLineNumbers: true,
+          roundedSelection: false,
+          readOnly: false,
+          cursorStyle: 'line',
+          automaticLayout: true,
+          // More aggressive suggestion settings for Tab completion
+          quickSuggestionsDelay: 100,
+          suggestSelection: 'first',
+          acceptSuggestionOnEnter: 'on'
         });
 
         editor.onDidChangeModelContent(() => {
@@ -1076,7 +3272,37 @@
           }, 10);
         });
 
-        showNotification('Monaco Editor loaded', 'success');
+        // Alternative Tab key handling using onKeyDown event
+        editor.onKeyDown((e) => {
+          if (e.keyCode === monaco.KeyCode.Tab) {
+            console.log('Tab key detected via onKeyDown');
+            const suggestController = editor.getContribution('editor.contrib.suggestController');
+            
+            if (suggestController && 
+                suggestController.widget && 
+                suggestController.widget.value && 
+                suggestController.widget.value.state === 1) {
+              
+              console.log('Preventing default Tab and accepting suggestion');
+              e.preventDefault();
+              e.stopPropagation();
+              suggestController.acceptSelectedSuggestion(false, true);
+            }
+          }
+        });
+
+        // Show autocomplete hint when editor is focused
+        editor.onDidFocusEditorText(() => {
+          const hint = document.getElementById('autocomplete-hint');
+          if (hint) {
+            hint.classList.add('show');
+            setTimeout(() => {
+              hint.classList.remove('show');
+            }, 3000); // Hide after 3 seconds
+          }
+        });
+
+        showNotification('Monaco Editor loaded with AI Autocomplete', 'success');
       } catch (e) {
         console.error('Monaco initialization failed:', e);
         monacoContainer.style.display = 'none';
@@ -1304,29 +3530,35 @@
       }
 
       const userColor = color || getRandomColor(userId);
-      const participantsList = document.getElementById('participants-list');
+      const participantsList = document.getElementById('participants-grid');
 
       if (!participantsList) {
         console.error('Participants list not found!');
         return;
       }
 
-      const li = document.createElement('li');
-      li.className = 'participant-item';
-      li.id = `participant-${userId}`;
+      const participantDiv = document.createElement('div');
+      participantDiv.className = 'participant-card';
+      participantDiv.id = `participant-${userId}`;
 
-      li.innerHTML = `
-        <img src="${picture || `https://ui-avatars.com/api/?name=${username}`}" alt="${username}" class="participant-avatar">
-        <span class="participant-name">${username}</span>
-        <div class="participant-color" style="background-color: ${userColor};"></div>
+      participantDiv.innerHTML = `
+        <img src="${picture || `https://ui-avatars.com/api/?name=${username}`}" alt="${username}" class="participant-card-avatar">
+        <div class="participant-info">
+          <div class="participant-card-name">${username}</div>
+          <div class="participant-status">
+            <div class="status-indicator" style="background-color: ${userColor};"></div>
+            Online
+          </div>
+        </div>
       `;
 
-      participantsList.appendChild(li);
+      participantsList.appendChild(participantDiv);
       console.log('Participant added to list:', username);
 
       // Update the count
-      const count = participantsList.querySelectorAll('.participant-item').length;
-      document.getElementById('participants-count').textContent = count;
+      const count = participantsList.querySelectorAll('.participant-card').length;
+      const participantsCountEl = document.getElementById('participants-count');
+      if (participantsCountEl) participantsCountEl.textContent = count;
       console.log('Updated participant count:', count);
     }
 
@@ -1339,9 +3571,13 @@
         console.log('Participant removed from list:', userId);
 
         // Update the count
-        const count = document.getElementById('participants-list').querySelectorAll('.participant-item').length;
-        document.getElementById('participants-count').textContent = count;
-        console.log('Updated participant count after removal:', count);
+        const participantsListEl = document.getElementById('participants-grid');
+        const participantsCountEl = document.getElementById('participants-count');
+        if (participantsListEl && participantsCountEl) {
+          const count = participantsListEl.querySelectorAll('.participant-card').length;
+          participantsCountEl.textContent = count;
+          console.log('Updated participant count after removal:', count);
+        }
       } else {
         console.log('Participant not found for removal:', userId);
       }
@@ -1402,31 +3638,123 @@
 
     // Display code execution result
     function displayCodeResult(data) {
-      const { result, error } = data;
+      const { result, error, language, username, fileName, executionTime } = data;
       const terminal = document.getElementById('terminal');
-      const inputDiv = terminal.querySelector('.terminal-input');
-
-      // Remove the terminal input temporarily
-      if (inputDiv) {
-        inputDiv.remove();
+      
+      // Open footer terminal automatically if not open
+      const footerTerminal = document.getElementById('footer-terminal');
+      const terminalBtn = document.getElementById('footer-terminal-btn');
+      if (footerTerminal && !footerTerminal.classList.contains('open')) {
+        footerTerminal.classList.add('open');
+        if (terminalBtn) terminalBtn.classList.add('active');
       }
+      
+      if (terminal) {
+        const inputDiv = terminal.querySelector('.terminal-input');
 
-      if (error) {
-        terminal.innerHTML += `\n<span style="color: #ff5252;">> Error: ${error}</span>`;
-      } else {
-        terminal.innerHTML += `\n> ${result}`;
+        // Remove the terminal input temporarily
+        if (inputDiv) {
+          inputDiv.remove();
+        }
+
+        // Add execution header with language and timing info
+        const timestamp = new Date().toLocaleTimeString();
+        terminal.innerHTML += `\n<span style="color: #4a9eff;">> [${timestamp}] Running ${language} code${fileName ? ` (${fileName})` : ''}${executionTime ? ` - ${executionTime}` : ''}</span>`;
+        
+        if (error) {
+          terminal.innerHTML += `\n<span style="color: #ff5252;">❌ Error: ${error}</span>`;
+          // Show notification for error
+          showNotification(`Code execution failed: ${error}`, 'error', 5000);
+        } else if (result) {
+          // Format output with proper styling
+          const formattedResult = result.split('\n').map(line => 
+            line.trim() ? `   ${line}` : ''
+          ).join('\n');
+          terminal.innerHTML += `\n<span style="color: #4ade80;">✅ Output:</span>\n<span style="color: #e5e7eb;">${formattedResult}</span>`;
+          terminal.innerHTML += `\n<span style="color: #4a9eff;">✨ Execution completed successfully!</span>`;
+          
+          // Show success notification
+          showNotification(`${language} code executed successfully!`, 'success', 3000);
+        } else {
+          terminal.innerHTML += `\n<span style="color: #fbbf24;">⚠️ No output generated</span>`;
+          showNotification(`${language} code executed with no output`, 'warning', 3000);
+        }
+        }
+
+        // Add separator line
+        if (terminal) {
+          terminal.innerHTML += `\n<span style="color: #6b7280;">─────────────────────────────────────────</span>`;
+
+          // Add back the terminal input
+          terminal.innerHTML += `<div class="terminal-input">
+            <span class="terminal-input-prompt">$</span>
+            <input type="text" class="terminal-input-field" id="terminal-input" placeholder="Enter bash command...">
+          </div>`;
+
+          // Reattach event listener to new terminal input
+          const terminalInput = document.getElementById('terminal-input');
+          if (terminalInput) {
+            terminalInput.addEventListener('keydown', handleTerminalInput);
+          }
+
+          // Scroll to bottom
+          terminal.scrollTop = terminal.scrollHeight;
+        }
+      
+      // Also update terminal sidebar if it exists
+      const terminalOutput = document.getElementById('terminal-output');
+      if (terminalOutput) {
+        const timestamp = new Date().toLocaleTimeString();
+        const headerLine = document.createElement('div');
+        headerLine.className = 'terminal-line';
+        headerLine.style.color = '#4a9eff';
+        headerLine.textContent = `[${timestamp}] Running ${language} code${executionTime ? ` - ${executionTime}` : ''}`;
+        terminalOutput.appendChild(headerLine);        if (error) {
+          const errorLine = document.createElement('div');
+          errorLine.className = 'terminal-line';
+          errorLine.style.color = '#ff5252';
+          errorLine.textContent = `❌ Error: ${error}`;
+          terminalOutput.appendChild(errorLine);
+        } else if (result) {
+          const outputLine = document.createElement('div');
+          outputLine.className = 'terminal-line';
+          outputLine.style.color = '#4ade80';
+          outputLine.textContent = '✅ Output:';
+          terminalOutput.appendChild(outputLine);
+          
+          result.split('\n').forEach(line => {
+            if (line.trim()) {
+              const resultLine = document.createElement('div');
+              resultLine.className = 'terminal-line';
+              resultLine.style.color = '#e5e7eb';
+              resultLine.textContent = `   ${line}`;
+              terminalOutput.appendChild(resultLine);
+            }
+          });
+          
+          const successLine = document.createElement('div');
+          successLine.className = 'terminal-line';
+          successLine.style.color = '#4a9eff';
+          successLine.textContent = '✨ Execution completed successfully!';
+          terminalOutput.appendChild(successLine);
+        } else {
+          const noOutputLine = document.createElement('div');
+          noOutputLine.className = 'terminal-line';
+          noOutputLine.style.color = '#fbbf24';
+          noOutputLine.textContent = '⚠️ No output generated';
+          terminalOutput.appendChild(noOutputLine);
+        }
+        
+        // Add separator
+        const separatorLine = document.createElement('div');
+        separatorLine.className = 'terminal-line';
+        separatorLine.style.color = '#6b7280';
+        separatorLine.textContent = '─────────────────────────────────────────';
+        terminalOutput.appendChild(separatorLine);
+        
+        // Scroll to bottom
+        terminalOutput.scrollTop = terminalOutput.scrollHeight;
       }
-
-      // Add back the terminal input
-      terminal.innerHTML += `<div class="terminal-input">
-        <span class="terminal-input-prompt">$</span>
-        <input type="text" class="terminal-input-field" id="terminal-input" placeholder="Enter bash command...">
-      </div>`;
-
-      // Reattach event listener to new terminal input
-      document.getElementById('terminal-input').addEventListener('keydown', handleTerminalInput);
-
-      terminal.scrollTop = terminal.scrollHeight;
     }
 
     // Switch file in editor
@@ -1524,6 +3852,15 @@
       // Show a loading notification
       showNotification('Loading editor...', 'info');
 
+      // Debug: Check if footer buttons exist
+      console.log('Checking footer buttons existence:');
+      console.log('Chat button:', document.getElementById('footer-chat-btn'));
+      console.log('Participants button:', document.getElementById('footer-participants-btn'));
+      console.log('Settings button:', document.getElementById('footer-settings-btn'));
+      console.log('Chat sidebar:', document.getElementById('chat-sidebar'));
+      console.log('Participants modal:', document.getElementById('participants-modal'));
+      console.log('Settings modal:', document.getElementById('settings-modal'));
+
       // Add a small delay before initializing to ensure DOM is ready
       setTimeout(function() {
         // Initialize editor
@@ -1534,7 +3871,24 @@
       initializeSocket();
 
       // Setup UI event handlers
+      console.log('About to setup event handlers...');
+      console.log('Verifying DOM elements exist:');
+      console.log('Footer chat button:', document.getElementById('footer-chat-btn'));
+      console.log('Footer participants button:', document.getElementById('footer-participants-btn'));
+      console.log('Footer settings button:', document.getElementById('footer-settings-btn'));
+      console.log('Footer terminal button:', document.getElementById('footer-terminal-btn'));
+      console.log('Add file button:', document.getElementById('add-file'));
+      console.log('Save file button:', document.getElementById('save-file'));
+      console.log('Close file button:', document.getElementById('close-file'));
+      console.log('Chat input:', document.getElementById('chat-input'));
+      console.log('Send message button:', document.getElementById('send-message'));
+      console.log('Copy link button:', document.getElementById('copy-link'));
+      console.log('Run code button:', document.getElementById('run-code'));
+      console.log('Leave room button:', document.getElementById('leave-room'));
+      console.log('Terminal input:', document.getElementById('terminal-input'));
+      console.log('Terminal sidebar input:', document.getElementById('terminal-input-sidebar'));
       setupEventHandlers();
+      console.log('Event handlers setup completed');
 
       // Toggle dark/light mode
       setupThemeToggle();
@@ -1551,46 +3905,102 @@
       }
     });
 
-    // Show simple notification
-    function showNotification(message, type = 'info', duration = 3000) {
-      // Remove any existing notifications to prevent stacking
-      const existingNotifications = document.querySelectorAll('.mode-notification');
-      existingNotifications.forEach(notification => {
-        notification.classList.add('fade-out');
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.remove();
-          }
-        }, 300);
+    // Professional notification system
+    function showNotification(message, type = 'info', duration = 4000, title = null) {
+      const container = document.getElementById('notification-container');
+      if (!container) return;
+
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.className = `notification-item ${type}`;
+      
+      // Generate unique ID for this notification
+      const notificationId = 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      notification.id = notificationId;
+
+      // Get appropriate icon based on type
+      const icons = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'i'
+      };
+
+      // Auto-generate title if not provided
+      const titles = {
+        success: 'Success',
+        error: 'Error',
+        warning: 'Warning',
+        info: 'Info'
+      };
+
+      const finalTitle = title || titles[type] || 'Notification';
+      const icon = icons[type] || 'i';
+
+      notification.innerHTML = `
+        <div class="notification-icon">${icon}</div>
+        <div class="notification-content">
+          <div class="notification-title">${finalTitle}</div>
+          <div class="notification-message">${message}</div>
+        </div>
+        <button class="notification-close" aria-label="Close notification">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="notification-progress"></div>
+      `;
+
+      // Add to container
+      container.appendChild(notification);
+
+      // Show animation
+      setTimeout(() => {
+        notification.classList.add('show');
+      }, 10);
+
+      // Set up close button
+      const closeBtn = notification.querySelector('.notification-close');
+      closeBtn.addEventListener('click', () => {
+        removeNotification(notification);
       });
 
-      // Create new notification
-      const notification = document.createElement('div');
-      notification.className = `mode-notification ${type}`;
-      notification.textContent = message;
-      document.body.appendChild(notification);
-
-      // Auto remove after duration
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.classList.add('fade-out');
-          setTimeout(() => {
-            if (notification.parentNode) {
-              notification.remove();
-            }
-          }, 300);
-        }
+      // Auto-remove after duration
+      const autoRemoveTimer = setTimeout(() => {
+        removeNotification(notification);
       }, duration);
 
-      // Allow manual dismissal by clicking
-      notification.addEventListener('click', () => {
-        notification.classList.add('fade-out');
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.remove();
-          }
-        }, 300);
-      });
+      // Store timer reference for potential cancellation
+      notification.autoRemoveTimer = autoRemoveTimer;
+
+      return notificationId;
+    }
+
+    // Remove notification with animation
+    function removeNotification(notification) {
+      if (!notification || !notification.parentNode) return;
+      
+      // Cancel auto-remove timer if it exists
+      if (notification.autoRemoveTimer) {
+        clearTimeout(notification.autoRemoveTimer);
+      }
+
+      notification.classList.add('fade-out');
+      
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 400);
+    }
+
+    // Clear all notifications
+    function clearAllNotifications() {
+      const container = document.getElementById('notification-container');
+      if (container) {
+        const notifications = container.querySelectorAll('.notification-item');
+        notifications.forEach(notification => {
+          removeNotification(notification);
+        });
+      }
     }
 
     // Setup event handlers for UI elements
@@ -1633,7 +4043,9 @@
       });
 
       // Add new file
-      document.getElementById('add-file').addEventListener('click', function() {
+      const addFileBtn = document.getElementById('add-file');
+      if (addFileBtn) {
+        addFileBtn.addEventListener('click', function() {
         const fileName = prompt('Enter file name (with extension):');
         if (!fileName) return;
 
@@ -1740,9 +4152,14 @@
           });
         }
       });
+      } else {
+        console.error('Add file button not found!');
+      }
 
       // Save file functionality
-      document.getElementById('save-file').addEventListener('click', function() {
+      const saveFileBtn = document.getElementById('save-file');
+      if (saveFileBtn) {
+        saveFileBtn.addEventListener('click', function() {
         if (!editor || files.length === 0) return;
 
         // Update current file content
@@ -1760,11 +4177,15 @@
             fileName: files[currentFileIndex].name,
             fileIndex: currentFileIndex
           });
-        }
-      });
+        }        });
+      } else {
+        console.error('Save file button not found!');
+      }
 
       // Close file functionality
-      document.getElementById('close-file').addEventListener('click', function() {
+      const closeFileBtn = document.getElementById('close-file');
+      if (closeFileBtn) {
+        closeFileBtn.addEventListener('click', function() {
         if (files.length <= 1) {
           showNotification('Cannot close the last file!', 'warning');
           return;
@@ -1808,6 +4229,9 @@
           }
         }
       });
+      } else {
+        console.error('Close file button not found!');
+      }
 
       // Chat functionality
       const chatInput = document.getElementById('chat-input');
@@ -1828,15 +4252,26 @@
         }
       }
 
-      sendButton.addEventListener('click', sendMessage);
-      chatInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          sendMessage();
-        }
-      });
+      if (sendButton) {
+        sendButton.addEventListener('click', sendMessage);
+      } else {
+        console.error('Send message button not found!');
+      }
+      
+      if (chatInput) {
+        chatInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter' || e.key === 'Tab') {
+            sendMessage();
+          }
+        });
+      } else {
+        console.error('Chat input not found!');
+      }
 
       // Copy room link
-      document.getElementById('copy-link').addEventListener('click', function() {
+      const copyLinkBtn = document.getElementById('copy-link');
+      if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', function() {
         const url = window.location.href;
         navigator.clipboard.writeText(url).then(() => {
           // Show toast notification
@@ -1862,40 +4297,92 @@
           }, 3000);
         });
       });
+      } else {
+        console.error('Copy link button not found!');
+      }
 
       // Run code
-      document.getElementById('run-code').addEventListener('click', function() {
-        if (socket) {
-          // Clear terminal first
-          const terminal = document.getElementById('terminal');
-          const inputDiv = terminal.querySelector('.terminal-input');
+      const runCodeBtn = document.getElementById('run-code');
+      if (runCodeBtn) {
+        runCodeBtn.addEventListener('click', function() {
+          if (socket && editor) {
+            const code = editor.getValue().trim();
+            
+            if (!code) {
+              showNotification('Please write some code before running it!', 'warning', 3000);
+              return;
+            }
+            
+            // Disable button during execution
+            runCodeBtn.disabled = true;
+            runCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+            
+            // Open footer terminal automatically
+            const footerTerminal = document.getElementById('footer-terminal');
+            const terminalBtn = document.getElementById('footer-terminal-btn');
+            if (footerTerminal && !footerTerminal.classList.contains('open')) {
+              footerTerminal.classList.add('open');
+              if (terminalBtn) terminalBtn.classList.add('active');
+            }
+            
+            // Clear terminal first
+            const terminal = document.getElementById('terminal');
+            if (terminal) {
+              const inputDiv = terminal.querySelector('.terminal-input');
 
-          // Remove the terminal input temporarily
-          if (inputDiv) {
-            inputDiv.remove();
+              // Remove the terminal input temporarily
+              if (inputDiv) {
+                inputDiv.remove();
+              }
+
+              const timestamp = new Date().toLocaleTimeString();
+              terminal.innerHTML += `\n<span style="color: #4a9eff;">> [${timestamp}] Starting execution...</span>`;
+
+              // Preserve terminal input
+              terminal.innerHTML += `<div class="terminal-input">
+                <span class="terminal-input-prompt">$</span>
+                <input type="text" class="terminal-input-field" id="terminal-input" placeholder="Enter bash command..." spellcheck="false">
+              </div>`;
+
+              // Reattach event listener to new terminal input
+              const terminalInput = document.getElementById('terminal-input');
+              if (terminalInput) {
+                terminalInput.addEventListener('keydown', handleTerminalInput);
+              }
+            }
+
+            // Show notification
+            showNotification(`Executing ${currentLanguage} code...`, 'info', 2000);
+
+            socket.emit('run_code', {
+              roomId,
+              code: code,
+              language: currentLanguage,
+              userId,
+              username,
+              fileName: files[currentFileIndex].name
+            });
+            
+            // Re-enable button after a timeout (in case no response)
+            setTimeout(() => {
+              runCodeBtn.disabled = false;
+              runCodeBtn.innerHTML = '<i class="fas fa-play"></i> Run';
+            }, 30000); // 30 second timeout
+          } else {
+            showNotification('Unable to execute code. Please check your connection.', 'error', 4000);
           }
-
-          terminal.innerHTML += '\n> Running code...\n';
-
-          // Preserve terminal input
-          terminal.innerHTML += `<div class="terminal-input">
-            <span class="terminal-input-prompt">$</span>
-            <input type="text" class="terminal-input-field" id="terminal-input" placeholder="Enter bash command..." spellcheck="false">
-          </div>`;
-
-          // Reattach event listener to new terminal input
-          document.getElementById('terminal-input').addEventListener('keydown', handleTerminalInput);
-
-          socket.emit('run_code', {
-            roomId,
-            code: editor.getValue(),
-            language: currentLanguage,
-            userId,
-            username,
-            fileName: files[currentFileIndex].name
-          });
-        }
-      });
+        });
+        
+        // Also handle Ctrl+Enter keyboard shortcut for running code
+        document.addEventListener('keydown', function(e) {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            runCodeBtn.click();
+          }
+        });
+      } else {
+        console.error('Run code button not found!');
+      }
 
       // Terminal input handling
       handleTerminalInput = function(e) {
@@ -1928,37 +4415,460 @@
           document.getElementById('terminal-input').focus();
 
           // Reattach event listener
-          document.getElementById('terminal-input').addEventListener('keydown', handleTerminalInput);
+          const terminalInputEl = document.getElementById('terminal-input');
+          if (terminalInputEl) {
+            terminalInputEl.addEventListener('keydown', handleTerminalInput);
+          }
         }
       }
 
+      // Terminal sidebar input handling
+      const handleTerminalSidebarInput = function(e) {
+        if (e.key === 'Enter') {
+          const command = e.target.value.trim();
+          if (!command) return;
+
+          // Add command to terminal output
+          const terminalOutput = document.getElementById('terminal-output');
+          const commandLine = document.createElement('div');
+          commandLine.className = 'terminal-line';
+          commandLine.textContent = `$ ${command}`;
+          terminalOutput.appendChild(commandLine);
+
+          // Clear input
+          e.target.value = '';
+
+          // Execute bash command via socket
+          if (socket) {
+            socket.emit('bash_command', {
+              roomId,
+              command,
+              userId,
+              username
+            });
+          }
+
+          // Scroll to bottom
+          terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+      };
+
+      // Setup terminal sidebar input
+      const terminalSidebarInput = document.getElementById('terminal-input-sidebar');
+      if (terminalSidebarInput) {
+        terminalSidebarInput.addEventListener('keydown', handleTerminalSidebarInput);
+        console.log('Terminal sidebar input handler attached');
+      } else {
+        console.error('Terminal sidebar input not found!');
+      }
+
       // Initial terminal input setup
-      document.getElementById('terminal-input').addEventListener('keydown', handleTerminalInput);
+      const terminalInputEl = document.getElementById('terminal-input');
+      if (terminalInputEl) {
+        terminalInputEl.addEventListener('keydown', handleTerminalInput);
+      } else {
+        console.error('Terminal input not found!');
+      }
 
       // Leave room
-      document.getElementById('leave-room').addEventListener('click', function() {
-        if (confirm('Are you sure you want to leave this room?')) {
-          window.location.href = '/dashboard';
+      const leaveRoomBtn = document.getElementById('leave-room');
+      if (leaveRoomBtn) {
+        leaveRoomBtn.addEventListener('click', function() {
+          if (confirm('Are you sure you want to leave this room?')) {
+            window.location.href = '/dashboard';
+          }
+        });
+      } else {
+        console.error('Leave room button not found!');
+      }
+
+      // Toggle chat panel (legacy - may not exist)
+      const collapseChatBtn = document.getElementById('collapse-chat');
+      if (collapseChatBtn) {
+        collapseChatBtn.addEventListener('click', function() {
+          const chatPanel = document.querySelector('.chat-panel');
+          const icon = this.querySelector('i');
+
+          if (chatPanel.style.width === '0px') {
+            chatPanel.style.width = '300px';
+            icon.className = 'fas fa-chevron-right';
+          } else {
+            chatPanel.style.width = '0px';
+            icon.className = 'fas fa-chevron-left';
+          }
+
+          // Resize editor after changing layout
+          if (editor) {
+            editor.layout();
+          }
+        });
+      } else {
+        console.error('Collapse chat button not found (may be expected for new layout)!');
+      }
+
+      // Footer Button Event Handlers
+      
+      console.log('Setting up footer button event handlers...');
+      
+      // Chat button - toggle slide-in chat panel
+      const footerChatBtn = document.getElementById('footer-chat-btn');
+      if (footerChatBtn) {
+        console.log('Footer chat button found, attaching event listener');
+        footerChatBtn.addEventListener('click', function() {
+          console.log('Chat button clicked');
+          const chatSidebar = document.getElementById('chat-sidebar');
+          const isOpen = chatSidebar.classList.contains('open');
+          
+          if (isOpen) {
+            chatSidebar.classList.remove('open');
+            this.classList.remove('active');
+          } else {
+            chatSidebar.classList.add('open');
+            this.classList.add('active');
+            // Focus on chat input when opened
+            setTimeout(() => {
+              const chatInput = document.getElementById('chat-input');
+              if (chatInput) chatInput.focus();
+            }, 300);
+          }
+        });
+      } else {
+        console.error('Footer chat button not found!');
+      }
+
+      // Chat close button
+      const chatCloseBtn = document.getElementById('chat-close-btn');
+      if (chatCloseBtn) {
+        console.log('Chat close button found, attaching event listener');
+        chatCloseBtn.addEventListener('click', function() {
+          console.log('Chat close button clicked');
+          const chatSidebar = document.getElementById('chat-sidebar');
+          const chatBtn = document.getElementById('footer-chat-btn');
+          chatSidebar.classList.remove('open');
+          chatBtn.classList.remove('active');
+        });
+      } else {
+        console.error('Chat close button not found!');
+      }
+
+      // AI Chat button - toggle slide-in AI chat panel
+      const footerAIChatBtn = document.getElementById('footer-ai-chat-btn');
+      if (footerAIChatBtn) {
+        console.log('Footer AI chat button found, attaching event listener');
+        footerAIChatBtn.addEventListener('click', function() {
+          console.log('AI Chat button clicked');
+          const aiChatSidebar = document.getElementById('ai-chat-sidebar');
+          const isOpen = aiChatSidebar.classList.contains('open');
+          
+          if (isOpen) {
+            aiChatSidebar.classList.remove('open');
+            this.classList.remove('active');
+          } else {
+            // Close regular chat if open
+            const chatSidebar = document.getElementById('chat-sidebar');
+            const chatBtn = document.getElementById('footer-chat-btn');
+            if (chatSidebar.classList.contains('open')) {
+              chatSidebar.classList.remove('open');
+              chatBtn.classList.remove('active');
+            }
+            
+            aiChatSidebar.classList.add('open');
+            this.classList.add('active');
+            // Focus on AI chat input when opened
+            setTimeout(() => {
+              const aiChatInput = document.getElementById('ai-chat-input');
+              if (aiChatInput) aiChatInput.focus();
+            }, 300);
+          }
+        });
+      } else {
+        console.error('Footer AI chat button not found!');
+      }
+
+      // AI Chat close button
+      const aiChatCloseBtn = document.getElementById('ai-chat-close-btn');
+      if (aiChatCloseBtn) {
+        console.log('AI Chat close button found, attaching event listener');
+        aiChatCloseBtn.addEventListener('click', function() {
+          console.log('AI Chat close button clicked');
+          const aiChatSidebar = document.getElementById('ai-chat-sidebar');
+          const aiChatBtn = document.getElementById('footer-ai-chat-btn');
+          aiChatSidebar.classList.remove('open');
+          aiChatBtn.classList.remove('active');
+        });
+      } else {
+        console.error('AI Chat close button not found!');
+      }
+
+      // Participants button - show modal
+      const footerParticipantsBtn = document.getElementById('footer-participants-btn');
+      if (footerParticipantsBtn) {
+        console.log('Footer participants button found, attaching event listener');
+        footerParticipantsBtn.addEventListener('click', function() {
+          console.log('Participants button clicked');
+          const modal = document.getElementById('participants-modal');
+          if (modal) {
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+          } else {
+            console.error('Participants modal not found!');
+          }
+        });
+      } else {
+        console.error('Footer participants button not found!');
+      }
+
+      // Participants modal close buttons
+      const participantsCloseBtn = document.getElementById('participants-close-btn');
+      if (participantsCloseBtn) {
+        console.log('Participants close button found, attaching event listener');
+        participantsCloseBtn.addEventListener('click', function() {
+          console.log('Participants close button clicked');
+          closeModal('participants-modal');
+        });
+      } else {
+        console.error('Participants close button not found!');
+      }
+
+      // Settings button - show modal
+      const footerSettingsBtn = document.getElementById('footer-settings-btn');
+      if (footerSettingsBtn) {
+        console.log('Footer settings button found, attaching event listener');
+        footerSettingsBtn.addEventListener('click', function() {
+          console.log('Settings button clicked');
+          const modal = document.getElementById('settings-modal');
+          if (modal) {
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            
+            // Load current settings
+            loadCurrentSettings();
+          } else {
+            console.error('Settings modal not found!');
+          }
+        });
+      } else {
+        console.error('Footer settings button not found!');
+      }
+
+      // Settings modal close button
+      const settingsCloseBtn = document.getElementById('settings-close-btn');
+      if (settingsCloseBtn) {
+        console.log('Settings close button found, attaching event listener');
+        settingsCloseBtn.addEventListener('click', function() {
+          console.log('Settings close button clicked');
+          closeModal('settings-modal');
+        });
+      } else {
+        console.error('Settings close button not found!');
+      }
+
+      // Terminal button - toggle footer terminal panel
+      const footerTerminalBtn = document.getElementById('footer-terminal-btn');
+      if (footerTerminalBtn) {
+        console.log('Footer terminal button found, attaching event listener');
+        footerTerminalBtn.addEventListener('click', function() {
+          console.log('Terminal button clicked');
+          const footerTerminal = document.getElementById('footer-terminal');
+          const isOpen = footerTerminal.classList.contains('open');
+          
+          if (isOpen) {
+            footerTerminal.classList.remove('open');
+            this.classList.remove('active');
+          } else {
+            footerTerminal.classList.add('open');
+            this.classList.add('active');
+            // Focus on terminal input when opened
+            setTimeout(() => {
+              const terminalInput = document.getElementById('terminal-input');
+              if (terminalInput) terminalInput.focus();
+            }, 300);
+          }
+        });
+      } else {
+        console.error('Footer terminal button not found!');
+      }
+
+      // Footer terminal close button
+      const footerTerminalClose = document.getElementById('footer-terminal-close');
+      if (footerTerminalClose) {
+        footerTerminalClose.addEventListener('click', function() {
+          const footerTerminal = document.getElementById('footer-terminal');
+          const terminalBtn = document.getElementById('footer-terminal-btn');
+          footerTerminal.classList.remove('open');
+          if (terminalBtn) terminalBtn.classList.remove('active');
+        });
+      }
+
+      // Terminal close button
+      const terminalCloseBtn = document.getElementById('terminal-close-btn');
+      if (terminalCloseBtn) {
+        console.log('Terminal close button found, attaching event listener');
+        terminalCloseBtn.addEventListener('click', function() {
+          console.log('Terminal close button clicked');
+          const terminalSidebar = document.getElementById('terminal-sidebar');
+          const terminalBtn = document.getElementById('footer-terminal-btn');
+          terminalSidebar.classList.remove('open');
+          terminalBtn.classList.remove('active');
+        });
+      } else {
+        console.error('Terminal close button not found!');
+      }
+
+      // Close modals when clicking outside
+      const modals = document.querySelectorAll('.modal-overlay');
+      console.log('Found modals:', modals.length);
+      modals.forEach((modal, index) => {
+        console.log(`Setting up modal ${index} (${modal.id}) click-outside handler`);
+        modal.addEventListener('click', function(e) {
+          if (e.target === this) {
+            console.log(`Closing modal ${this.id} by clicking outside`);
+            closeModal(this.id);
+          }
+        });
+      });
+
+      // Settings Event Handlers
+      console.log('Setting up settings event handlers...');
+      
+      // Show/Hide Remote Cursors
+      const settingShowCursors = document.getElementById('setting-show-cursors');
+      if (settingShowCursors) {
+        settingShowCursors.addEventListener('change', function() {
+          const showCursors = this.checked;
+          Object.keys(remoteCursors).forEach(userId => {
+            const cursor = remoteCursors[userId].element;
+            cursor.style.display = showCursors ? 'block' : 'none';
+          });
+          localStorage.setItem('codecollab-show-cursors', showCursors);
+          showNotification(`Remote cursors ${showCursors ? 'enabled' : 'disabled'}`, 'info');
+        });
+      } else {
+        console.error('setting-show-cursors element not found');
+      }
+
+      // Auto Save
+      const settingAutoSave = document.getElementById('setting-auto-save');
+      if (settingAutoSave) {
+        settingAutoSave.addEventListener('change', function() {
+          const autoSave = this.checked;
+          localStorage.setItem('codecollab-auto-save', autoSave);
+          showNotification(`Auto save ${autoSave ? 'enabled' : 'disabled'}`, 'info');
+          
+          if (autoSave && !window.autoSaveInterval) {
+            // Set up auto save every 30 seconds
+            window.autoSaveInterval = setInterval(() => {
+              if (editor && files.length > 0) {
+                files[currentFileIndex].content = editor.getValue();
+                showNotification('Auto saved', 'success', 1000);
+              }
+            }, 30000);
+          } else if (!autoSave && window.autoSaveInterval) {
+            clearInterval(window.autoSaveInterval);
+            window.autoSaveInterval = null;
+          }
+        });
+      } else {
+        console.error('setting-auto-save element not found');
+      }
+
+      // Line Numbers
+      document.getElementById('setting-line-numbers').addEventListener('change', function() {
+        const showLineNumbers = this.checked;
+        if (editor && typeof monaco !== 'undefined') {
+          editor.updateOptions({ lineNumbers: showLineNumbers ? 'on' : 'off' });
+        }
+        localStorage.setItem('codecollab-line-numbers', showLineNumbers);
+        showNotification(`Line numbers ${showLineNumbers ? 'enabled' : 'disabled'}`, 'info');
+      });
+
+      // Minimap
+      document.getElementById('setting-minimap').addEventListener('change', function() {
+        const showMinimap = this.checked;
+        if (editor && typeof monaco !== 'undefined') {
+          editor.updateOptions({ minimap: { enabled: showMinimap } });
+        }
+        localStorage.setItem('codecollab-minimap', showMinimap);
+        showNotification(`Minimap ${showMinimap ? 'enabled' : 'disabled'}`, 'info');
+      });
+
+      // Real-time Sync
+      document.getElementById('setting-realtime-sync').addEventListener('change', function() {
+        const realtimeSync = this.checked;
+        localStorage.setItem('codecollab-realtime-sync', realtimeSync);
+        showNotification(`Real-time sync ${realtimeSync ? 'enabled' : 'disabled'}`, 'info');
+        
+        // You can add logic here to enable/disable real-time synchronization
+        window.realtimeSyncEnabled = realtimeSync;
+      });
+
+      // Chat Notifications
+      document.getElementById('setting-chat-notifications').addEventListener('change', function() {
+        const chatNotifications = this.checked;
+        localStorage.setItem('codecollab-chat-notifications', chatNotifications);
+        showNotification(`Chat notifications ${chatNotifications ? 'enabled' : 'disabled'}`, 'info');
+        window.chatNotificationsEnabled = chatNotifications;
+      });
+
+      // Join/Leave Alerts
+      document.getElementById('setting-join-alerts').addEventListener('change', function() {
+        const joinAlerts = this.checked;
+        localStorage.setItem('codecollab-join-alerts', joinAlerts);
+        showNotification(`Join/leave alerts ${joinAlerts ? 'enabled' : 'disabled'}`, 'info');
+        window.joinAlertsEnabled = joinAlerts;
+      });
+
+      // Performance Mode
+      document.getElementById('setting-performance-mode').addEventListener('change', function() {
+        const performanceMode = this.checked;
+        localStorage.setItem('codecollab-performance-mode', performanceMode);
+        
+        if (performanceMode) {
+          document.body.classList.add('performance-mode');
+          document.querySelector('.spline-container').style.display = 'none';
+          document.querySelector('.gradient-bg').style.opacity = '1';
+          document.querySelector('.gradient-bg').style.zIndex = '-1';
+          showNotification('Performance mode enabled', 'success');
+        } else {
+          document.body.classList.remove('performance-mode');
+          document.querySelector('.spline-container').style.display = 'block';
+          document.querySelector('.gradient-bg').style.opacity = '0.3';
+          document.querySelector('.gradient-bg').style.zIndex = '-2';
+          showNotification('Performance mode disabled', 'info');
         }
       });
 
-      // Toggle chat panel
-      document.getElementById('collapse-chat').addEventListener('click', function() {
-        const chatPanel = document.querySelector('.chat-panel');
-        const icon = this.querySelector('i');
-
-        if (chatPanel.style.width === '0px') {
-          chatPanel.style.width = '300px';
-          icon.className = 'fas fa-chevron-right';
-        } else {
-          chatPanel.style.width = '0px';
-          icon.className = 'fas fa-chevron-left';
+      // Auto Complete
+      document.getElementById('setting-auto-complete').addEventListener('change', function() {
+        const autoComplete = this.checked;
+        if (editor && typeof monaco !== 'undefined') {
+          editor.updateOptions({ 
+            suggestOnTriggerCharacters: autoComplete,
+            quickSuggestions: autoComplete
+          });
         }
+        localStorage.setItem('codecollab-auto-complete', autoComplete);
+        showNotification(`Auto complete ${autoComplete ? 'enabled' : 'disabled'}`, 'info');
+      });
 
-        // Resize editor after changing layout
-        if (editor) {
-          editor.layout();
-        }
+      // Theme Selection
+      document.querySelectorAll('.theme-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const theme = this.getAttribute('data-theme');
+          
+          // Update active theme
+          document.querySelectorAll('.theme-option').forEach(opt => opt.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Apply theme to editor
+          if (editor && typeof monaco !== 'undefined') {
+            monaco.editor.setTheme(theme);
+          }
+          
+          // Save theme preference
+          localStorage.setItem('codecollab-editor-theme', theme);
+          showNotification(`Theme changed to ${this.querySelector('.theme-name').textContent}`, 'success');
+        });
       });
 
       // Toggle performance mode
@@ -2045,6 +4955,417 @@
         }
       });
     }
+
+    // Helper function to close modals
+    function closeModal(modalId) {
+      console.log('Attempting to close modal:', modalId);
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        console.log('Modal found, removing show class');
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+      } else {
+        console.error('Modal not found:', modalId);
+      }
+    }
+
+    // Helper function to load current settings from localStorage
+    function loadCurrentSettings() {
+      console.log('Loading current settings...');
+      try {
+        // Load and apply saved settings
+        const showCursors = localStorage.getItem('codecollab-show-cursors') !== 'false';
+        const showCursorsEl = document.getElementById('setting-show-cursors');
+        if (showCursorsEl) showCursorsEl.checked = showCursors;
+
+        const autoSave = localStorage.getItem('codecollab-auto-save') !== 'false';
+        const autoSaveEl = document.getElementById('setting-auto-save');
+        if (autoSaveEl) autoSaveEl.checked = autoSave;
+
+        const lineNumbers = localStorage.getItem('codecollab-line-numbers') !== 'false';
+        const lineNumbersEl = document.getElementById('setting-line-numbers');
+        if (lineNumbersEl) lineNumbersEl.checked = lineNumbers;
+
+        const minimap = localStorage.getItem('codecollab-minimap') !== 'false';
+        const minimapEl = document.getElementById('setting-minimap');
+        if (minimapEl) minimapEl.checked = minimap;
+
+        const realtimeSync = localStorage.getItem('codecollab-realtime-sync') !== 'false';
+        const realtimeSyncEl = document.getElementById('setting-realtime-sync');
+        if (realtimeSyncEl) realtimeSyncEl.checked = realtimeSync;
+
+        const chatNotifications = localStorage.getItem('codecollab-chat-notifications') !== 'false';
+        const chatNotificationsEl = document.getElementById('setting-chat-notifications');
+        if (chatNotificationsEl) chatNotificationsEl.checked = chatNotifications;
+
+        const joinAlerts = localStorage.getItem('codecollab-join-alerts') !== 'false';
+        const joinAlertsEl = document.getElementById('setting-join-alerts');
+        if (joinAlertsEl) joinAlertsEl.checked = joinAlerts;
+
+        const performanceMode = localStorage.getItem('codecollab-performance-mode') === 'true';
+        const performanceModeEl = document.getElementById('setting-performance-mode');
+        if (performanceModeEl) performanceModeEl.checked = performanceMode;
+
+        const autoComplete = localStorage.getItem('codecollab-auto-complete') !== 'false';
+        const autoCompleteEl = document.getElementById('setting-auto-complete');
+        if (autoCompleteEl) autoCompleteEl.checked = autoComplete;
+
+        // Load theme
+        const savedEditorTheme = localStorage.getItem('codecollab-editor-theme') || 'vs-dark';
+        document.querySelectorAll('.theme-option').forEach(opt => opt.classList.remove('active'));
+        const activeTheme = document.querySelector(`[data-theme="${savedEditorTheme}"]`);
+        if (activeTheme) {
+          activeTheme.classList.add('active');
+        }
+
+        console.log('Settings loaded successfully');
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    }
+
+    // Updated addParticipant function to work with both old list and new modal
+    function addParticipant(userId, username, picture, color) {
+      console.log('Adding participant:', userId, username);
+      
+      // Add to participants modal
+      const participantsGrid = document.getElementById('participants-grid');
+      if (participantsGrid && !document.getElementById(`participant-card-${userId}`)) {
+        const userColor = color || getRandomColor(userId);
+        
+        const participantCard = document.createElement('div');
+        participantCard.className = 'participant-card';
+        participantCard.id = `participant-card-${userId}`;
+        
+        participantCard.innerHTML = `
+          <img src="${picture || `https://ui-avatars.com/api/?name=${username}`}" alt="${username}" class="participant-card-avatar">
+          <div class="participant-info">
+            <div class="participant-card-name">${username}</div>
+            <div class="participant-status">
+              <div class="status-indicator"></div>
+              Online
+            </div>
+          </div>
+        `;
+        
+        participantsGrid.appendChild(participantCard);
+        console.log('Participant added to modal:', username);
+      }
+
+      // Update the count in footer
+      const totalParticipants = document.querySelectorAll('.participant-card').length;
+      document.getElementById('online-count').textContent = totalParticipants;
+    }
+
+    // Updated removeParticipant function
+    function removeParticipant(userId) {
+      console.log('Removing participant:', userId);
+      
+      // Remove from participants modal
+      const participantCard = document.getElementById(`participant-card-${userId}`);
+      if (participantCard) {
+        participantCard.remove();
+        console.log('Participant removed from modal:', userId);
+      }
+
+      // Update the count in footer
+      const totalParticipants = document.querySelectorAll('.participant-card').length;
+      document.getElementById('online-count').textContent = totalParticipants;
+    }
+
+    // Enhanced addChatMessage function with notifications
+    function addChatMessage(data, isOwnMessage) {
+      const { username, message, timestamp, picture } = data;
+      const time = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isOwnMessage ? 'outgoing' : 'incoming'} mb-2`;
+
+      messageDiv.innerHTML = `
+        ${!isOwnMessage ? `<div class="message-sender">${username}</div>` : ''}
+        <div class="message-content">${message}</div>
+        <div class="message-time">${time}</div>
+      `;
+
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // Show notification if chat is closed and notifications are enabled
+      const chatSidebar = document.getElementById('chat-sidebar');
+      const chatNotificationsEnabled = localStorage.getItem('codecollab-chat-notifications') !== 'false';
+      
+      if (!isOwnMessage && !chatSidebar.classList.contains('open') && chatNotificationsEnabled) {
+        showNotification(`${username}: ${message}`, 'info', 5000);
+      }
+    }
+
+    // AI Chat Functions
+    function initializeAIChat() {
+      console.log('Initializing AI Chat...');
+      
+      // AI Model selector
+      const aiModelSelect = document.getElementById('ai-model-select');
+      if (aiModelSelect) {
+        aiModelSelect.value = currentAIModel;
+        aiModelSelect.addEventListener('change', function() {
+          currentAIModel = this.value;
+          console.log('AI Model changed to:', currentAIModel);
+          showNotification(`Switched to ${this.options[this.selectedIndex].text}`, 'info', 2000);
+        });
+      }
+
+      // AI Chat input
+      const aiChatInput = document.getElementById('ai-chat-input');
+      const aiSendBtn = document.getElementById('ai-send-message');
+      
+      if (aiChatInput) {
+        // Auto-resize textarea
+        aiChatInput.addEventListener('input', function() {
+          this.style.height = 'auto';
+          this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Send message on Enter (Shift+Enter for new line)
+        aiChatInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendAIMessage();
+          }
+        });
+      }
+
+      if (aiSendBtn) {
+        aiSendBtn.addEventListener('click', sendAIMessage);
+      }
+
+      // AI Action buttons
+      const analyzeBtn = document.getElementById('ai-analyze-code');
+      const debugBtn = document.getElementById('ai-debug-code');
+      const optimizeBtn = document.getElementById('ai-optimize-code');
+      const explainBtn = document.getElementById('ai-explain-code');
+
+      if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', () => analyzeCurrentCode('general'));
+      }
+      
+      if (debugBtn) {
+        debugBtn.addEventListener('click', () => analyzeCurrentCode('debug'));
+      }
+      
+      if (optimizeBtn) {
+        optimizeBtn.addEventListener('click', () => analyzeCurrentCode('optimize'));
+      }
+      
+      if (explainBtn) {
+        explainBtn.addEventListener('click', () => analyzeCurrentCode('explain'));
+      }
+
+      console.log('AI Chat initialized successfully');
+    }
+
+    async function sendAIMessage() {
+      const aiChatInput = document.getElementById('ai-chat-input');
+      const message = aiChatInput.value.trim();
+      
+      if (!message || isAIResponding) return;
+
+      // Add user message to chat
+      addAIMessage(message, 'user');
+      aiChatInput.value = '';
+      aiChatInput.style.height = 'auto';
+
+      // Show loading
+      showAILoading();
+      isAIResponding = true;
+
+      try {
+        // Get current code context
+        const context = getCodeContext();
+        
+        const response = await fetch('/api/ai-chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: message,
+            context: context,
+            model: currentAIModel,
+            conversationHistory: aiConversationHistory
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Add AI response to chat
+        addAIMessage(data.response, 'assistant');
+        
+        // Update conversation history
+        aiConversationHistory.push(
+          { role: 'user', content: message },
+          { role: 'assistant', content: data.response }
+        );
+
+        // Keep only last 20 messages to manage memory
+        if (aiConversationHistory.length > 20) {
+          aiConversationHistory = aiConversationHistory.slice(-20);
+        }
+
+      } catch (error) {
+        console.error('AI Chat error:', error);
+        addAIMessage('Sorry, I encountered an error. Please try again.', 'assistant', true);
+        showNotification('AI Chat error: ' + error.message, 'error');
+      } finally {
+        hideAILoading();
+        isAIResponding = false;
+      }
+    }
+
+    async function analyzeCurrentCode(analysisType) {
+      if (!editor || isAIResponding) return;
+
+      const code = editor.getValue();
+      if (!code.trim()) {
+        showNotification('No code to analyze', 'warning');
+        return;
+      }
+
+      // Show loading
+      showAILoading();
+      isAIResponding = true;
+
+      try {
+        const response = await fetch('/api/ai-analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            code: code,
+            language: currentLanguage,
+            analysisType: analysisType
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Add analysis to chat
+        const analysisTitle = {
+          'general': '🔍 Code Analysis',
+          'debug': '🐛 Debug Analysis', 
+          'optimize': '⚡ Optimization Suggestions',
+          'explain': '📝 Code Explanation'
+        }[analysisType] || '🔍 Analysis';
+
+        addAIMessage(`${analysisTitle}\n\n${data.analysis}`, 'assistant');
+
+      } catch (error) {
+        console.error('AI Analysis error:', error);
+        addAIMessage('Sorry, I encountered an error analyzing your code. Please try again.', 'assistant', true);
+        showNotification('AI Analysis error: ' + error.message, 'error');
+      } finally {
+        hideAILoading();
+        isAIResponding = false;
+      }
+    }
+
+    function addAIMessage(message, role, isError = false) {
+      const aiChatMessages = document.getElementById('ai-chat-messages');
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `ai-message ${role}`;
+
+      const iconClass = role === 'user' ? 'fas fa-user' : 'fas fa-robot';
+      const formattedMessage = formatAIMessage(message);
+
+      messageDiv.innerHTML = `
+        <div class="ai-message-icon">
+          <i class="${iconClass}"></i>
+        </div>
+        <div class="ai-message-content">
+          <div class="ai-message-text ${isError ? 'error' : ''}">${formattedMessage}</div>
+        </div>
+      `;
+
+      aiChatMessages.appendChild(messageDiv);
+      aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+    }
+
+    function formatAIMessage(message) {
+      // Convert markdown-style formatting to HTML
+      return message
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>');
+    }
+
+    function showAILoading() {
+      const aiChatMessages = document.getElementById('ai-chat-messages');
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'ai-message ai-assistant';
+      loadingDiv.id = 'ai-loading-message';
+
+      loadingDiv.innerHTML = `
+        <div class="ai-message-icon">
+          <i class="fas fa-robot"></i>
+        </div>
+        <div class="ai-message-content">
+          <div class="ai-message-text">
+            <div class="ai-loading">
+              <span>Thinking</span>
+              <div class="ai-loading-dots">
+                <div class="ai-loading-dot"></div>
+                <div class="ai-loading-dot"></div>
+                <div class="ai-loading-dot"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      aiChatMessages.appendChild(loadingDiv);
+      aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+    }
+
+    function hideAILoading() {
+      const loadingMessage = document.getElementById('ai-loading-message');
+      if (loadingMessage) {
+        loadingMessage.remove();
+      }
+    }
+
+    function getCodeContext() {
+      if (!editor) return null;
+
+      const selection = editor.getSelection();
+      const selectedText = selection ? editor.getModel().getValueInRange(selection) : null;
+      
+      return {
+        code: editor.getValue(),
+        language: currentLanguage,
+        selectedText: selectedText,
+        fileIndex: currentFileIndex,
+        fileName: files[currentFileIndex]?.name
+      };
+    }
+
+    // Initialize AI Chat when document is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add a small delay to ensure all elements are ready
+      setTimeout(initializeAIChat, 1000);
+    });
   </script>
 </body>
 </html>

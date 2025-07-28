@@ -1,5 +1,5 @@
 import express from "express";
-import { collection, safeDBOperation, ensureDBConnection, connectDB } from "./config.js";
+import { collection, Room, safeDBOperation, ensureDBConnection, connectDB } from "./config.js";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -14,6 +14,9 @@ import { v4 as uuidv4 } from "uuid";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import crypto from "crypto"; // Add crypto import for session ID generation
+import { exec, spawn } from "child_process"; // Add for code execution
+import { promisify } from "util"; // Add for promisifying exec
+import { GoogleGenerativeAI } from "@google/generative-ai"; // Add Gemini AI integration
 
 // Validate required environment variables for Vercel
 const requiredEnvVars = ['MONGODB_URI'];
@@ -36,6 +39,7 @@ console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');
 console.log('SESSION_SECRET:', process.env.SESSION_SECRET ? 'Set' : 'Using default');
 console.log('CLIENT_ID:', process.env.CLIENT_ID ? 'Set' : 'Not set');
 console.log('CLIENT_GOOGLE_SECRET:', process.env.CLIENT_GOOGLE_SECRET ? 'Set' : 'Not set');
+console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Not set');
 
 dotenv.config();
 
@@ -52,6 +56,461 @@ connectDB()
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Promisify exec for better async handling
+const execAsync = promisify(exec);
+
+// Code execution function with support for multiple languages
+async function executeCode(code, language, fileName = 'temp') {
+  const startTime = Date.now();
+  
+  try {
+    let result;
+    const normalizedLanguage = language.toLowerCase();
+    
+    // Create a temporary directory for code execution
+    const tempDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    // Generate unique filename to avoid conflicts
+    const uniqueId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    switch (normalizedLanguage) {
+      case 'javascript':
+      case 'js':
+        result = await executeJavaScript(code, tempDir, uniqueId);
+        break;
+        
+      case 'python':
+      case 'py':
+        result = await executePython(code, tempDir, uniqueId);
+        break;
+        
+      case 'java':
+        result = await executeJava(code, tempDir, uniqueId, fileName);
+        break;
+        
+      case 'cpp':
+      case 'c++':
+        result = await executeCpp(code, tempDir, uniqueId);
+        break;
+        
+      case 'c':
+        result = await executeC(code, tempDir, uniqueId);
+        break;
+        
+      case 'go':
+        result = await executeGo(code, tempDir, uniqueId);
+        break;
+        
+      case 'rust':
+        result = await executeRust(code, tempDir, uniqueId);
+        break;
+        
+      case 'php':
+        result = await executePhp(code, tempDir, uniqueId);
+        break;
+        
+      case 'ruby':
+        result = await executeRuby(code, tempDir, uniqueId);
+        break;
+        
+      case 'bash':
+      case 'shell':
+        result = await executeBash(code, tempDir, uniqueId);
+        break;
+        
+      default:
+        throw new Error(`Language '${language}' is not supported yet. Supported languages: JavaScript, Python, Java, C++, C, Go, Rust, PHP, Ruby, Bash`);
+    }
+    
+    const executionTime = Date.now() - startTime;
+    
+    return {
+      output: result.output,
+      error: result.error,
+      executionTime: `${executionTime}ms`
+    };
+    
+  } catch (error) {
+    const executionTime = Date.now() - startTime;
+    return {
+      output: null,
+      error: error.message,
+      executionTime: `${executionTime}ms`
+    };
+  }
+}
+
+// JavaScript execution
+async function executeJavaScript(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.js`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    const { stdout, stderr } = await execAsync(`node "${filePath}"`, {
+      timeout: 10000, // 10 second timeout
+      cwd: tempDir
+    });
+    
+    // Clean up
+    fs.unlinkSync(filePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up even if execution failed
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    return {
+      output: null,
+      error: error.message || error.stderr || 'JavaScript execution failed'
+    };
+  }
+}
+
+// Python execution
+async function executePython(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.py`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    const { stdout, stderr } = await execAsync(`python3 "${filePath}"`, {
+      timeout: 15000, // 15 second timeout
+      cwd: tempDir
+    });
+    
+    // Clean up
+    fs.unlinkSync(filePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up even if execution failed
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    // Try python instead of python3
+    try {
+      const { stdout, stderr } = await execAsync(`python "${filePath}"`, {
+        timeout: 15000,
+        cwd: tempDir
+      });
+      
+      return {
+        output: stdout || 'Code executed successfully (no output)',
+        error: stderr || null
+      };
+    } catch (fallbackError) {
+      return {
+        output: null,
+        error: 'Python execution failed. Make sure Python is installed on the system.'
+      };
+    }
+  }
+}
+
+// Java execution
+async function executeJava(code, tempDir, uniqueId, fileName) {
+  // Extract class name from code or use fileName
+  const classNameMatch = code.match(/public\s+class\s+(\w+)/);
+  const className = classNameMatch ? classNameMatch[1] : fileName.replace(/\.(java|class)$/, '');
+  
+  const filePath = path.join(tempDir, `${className}.java`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    // Compile
+    const { stderr: compileError } = await execAsync(`javac "${filePath}"`, {
+      timeout: 10000,
+      cwd: tempDir
+    });
+    
+    if (compileError) {
+      throw new Error(`Compilation failed: ${compileError}`);
+    }
+    
+    // Execute
+    const { stdout, stderr } = await execAsync(`java -cp "${tempDir}" ${className}`, {
+      timeout: 15000,
+      cwd: tempDir
+    });
+    
+    // Clean up
+    const classFile = path.join(tempDir, `${className}.class`);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(classFile)) fs.unlinkSync(classFile);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up
+    const classFile = path.join(tempDir, `${className}.class`);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(classFile)) fs.unlinkSync(classFile);
+    
+    return {
+      output: null,
+      error: error.message || 'Java execution failed. Make sure Java JDK is installed.'
+    };
+  }
+}
+
+// C++ execution
+async function executeCpp(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.cpp`);
+  const exePath = path.join(tempDir, `${uniqueId}_cpp`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    // Compile
+    const { stderr: compileError } = await execAsync(`g++ "${filePath}" -o "${exePath}"`, {
+      timeout: 15000,
+      cwd: tempDir
+    });
+    
+    if (compileError) {
+      throw new Error(`Compilation failed: ${compileError}`);
+    }
+    
+    // Execute
+    const { stdout, stderr } = await execAsync(`"${exePath}"`, {
+      timeout: 10000,
+      cwd: tempDir
+    });
+    
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(exePath)) fs.unlinkSync(exePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(exePath)) fs.unlinkSync(exePath);
+    
+    return {
+      output: null,
+      error: error.message || 'C++ execution failed. Make sure g++ compiler is installed.'
+    };
+  }
+}
+
+// C execution
+async function executeC(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.c`);
+  const exePath = path.join(tempDir, `${uniqueId}_c`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    // Compile
+    const { stderr: compileError } = await execAsync(`gcc "${filePath}" -o "${exePath}"`, {
+      timeout: 15000,
+      cwd: tempDir
+    });
+    
+    if (compileError) {
+      throw new Error(`Compilation failed: ${compileError}`);
+    }
+    
+    // Execute
+    const { stdout, stderr } = await execAsync(`"${exePath}"`, {
+      timeout: 10000,
+      cwd: tempDir
+    });
+    
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(exePath)) fs.unlinkSync(exePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(exePath)) fs.unlinkSync(exePath);
+    
+    return {
+      output: null,
+      error: error.message || 'C execution failed. Make sure gcc compiler is installed.'
+    };
+  }
+}
+
+// Go execution
+async function executeGo(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.go`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    const { stdout, stderr } = await execAsync(`go run "${filePath}"`, {
+      timeout: 15000,
+      cwd: tempDir
+    });
+    
+    // Clean up
+    fs.unlinkSync(filePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    
+    return {
+      output: null,
+      error: error.message || 'Go execution failed. Make sure Go is installed.'
+    };
+  }
+}
+
+// Rust execution
+async function executeRust(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.rs`);
+  const exePath = path.join(tempDir, `${uniqueId}_rust`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    // Compile
+    const { stderr: compileError } = await execAsync(`rustc "${filePath}" -o "${exePath}"`, {
+      timeout: 20000,
+      cwd: tempDir
+    });
+    
+    if (compileError) {
+      throw new Error(`Compilation failed: ${compileError}`);
+    }
+    
+    // Execute
+    const { stdout, stderr } = await execAsync(`"${exePath}"`, {
+      timeout: 10000,
+      cwd: tempDir
+    });
+    
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(exePath)) fs.unlinkSync(exePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(exePath)) fs.unlinkSync(exePath);
+    
+    return {
+      output: null,
+      error: error.message || 'Rust execution failed. Make sure Rust is installed.'
+    };
+  }
+}
+
+// PHP execution
+async function executePhp(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.php`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    const { stdout, stderr } = await execAsync(`php "${filePath}"`, {
+      timeout: 10000,
+      cwd: tempDir
+    });
+    
+    // Clean up
+    fs.unlinkSync(filePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    
+    return {
+      output: null,
+      error: error.message || 'PHP execution failed. Make sure PHP is installed.'
+    };
+  }
+}
+
+// Ruby execution
+async function executeRuby(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.rb`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    const { stdout, stderr } = await execAsync(`ruby "${filePath}"`, {
+      timeout: 10000,
+      cwd: tempDir
+    });
+    
+    // Clean up
+    fs.unlinkSync(filePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    
+    return {
+      output: null,
+      error: error.message || 'Ruby execution failed. Make sure Ruby is installed.'
+    };
+  }
+}
+
+// Bash execution
+async function executeBash(code, tempDir, uniqueId) {
+  const filePath = path.join(tempDir, `${uniqueId}.sh`);
+  fs.writeFileSync(filePath, code);
+  
+  try {
+    const { stdout, stderr } = await execAsync(`bash "${filePath}"`, {
+      timeout: 10000,
+      cwd: tempDir
+    });
+    
+    // Clean up
+    fs.unlinkSync(filePath);
+    
+    return {
+      output: stdout || 'Code executed successfully (no output)',
+      error: stderr || null
+    };
+  } catch (error) {
+    // Clean up
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    
+    return {
+      output: null,
+      error: error.message || 'Bash execution failed.'
+    };
+  }
+}
 
 // Initialize express app
 const app = express();
@@ -121,8 +580,8 @@ app.use(
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       httpOnly: true,
-      secure: isProduction || (process.env.HTTPS === "true"), // HTTPS in production or when explicitly set
-      sameSite: isProduction ? "lax" : "lax", // Use lax for better compatibility
+      secure: false, // Always false for local development
+      sameSite: "lax", // Use lax for better compatibility
       domain: undefined, // Let browser handle domain automatically
       path: "/", // Ensure cookies work for all paths
     },
@@ -276,16 +735,42 @@ const isVercelProduction = process.env.VERCEL_ENV === 'production' ||
                           process.env.VERCEL_URL || 
                           process.env.NODE_ENV === 'production';
 
-const googleCallbackURL = process.env.GOOGLE_CALLBACK_URL || 
-  (isVercelProduction ? 
-    "https://code-collab-beta-v3.vercel.app/auth/google/callback" : 
-    "http://localhost:3002/auth/google/callback");
+// Check if we're running in a dev tunnel environment
+const isDevTunnel = process.env.CODESPACE_NAME || 
+                   process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN ||
+                   (process.env.PORT && process.env.PORT !== '3002');
+
+// Determine the appropriate callback URL and base URL based on environment
+let googleCallbackURL;
+let baseURL;
+
+if (process.env.GOOGLE_CALLBACK_URL) {
+  // Use explicitly set callback URL (highest priority)
+  googleCallbackURL = process.env.GOOGLE_CALLBACK_URL;
+  // Extract base URL from callback URL
+  baseURL = googleCallbackURL.replace('/auth/google/callback', '');
+} else if (isVercelProduction) {
+  // Vercel production environment
+  googleCallbackURL = "https://code-collab-beta-v3.vercel.app/auth/google/callback";
+  baseURL = "https://code-collab-beta-v3.vercel.app";
+} else {
+  // Development environment - check if we're using HTTPS or HTTP
+  const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
+  googleCallbackURL = `${protocol}://localhost:3002/auth/google/callback`;
+  baseURL = `${protocol}://localhost:3002`;
+}
 
 console.log("Environment detection:");
 console.log("- VERCEL_ENV:", process.env.VERCEL_ENV);
 console.log("- VERCEL_URL:", process.env.VERCEL_URL);
 console.log("- NODE_ENV:", process.env.NODE_ENV);
+console.log("- CODESPACE_NAME:", process.env.CODESPACE_NAME);
+console.log("- PORT:", process.env.PORT);
+console.log("- HTTPS:", process.env.HTTPS);
+console.log("- GOOGLE_CALLBACK_URL:", process.env.GOOGLE_CALLBACK_URL);
 console.log("- isVercelProduction:", isVercelProduction);
+console.log("- isDevTunnel:", isDevTunnel);
+console.log("- Base URL:", baseURL);
 console.log("- Google OAuth Callback URL:", googleCallbackURL);
 
 passport.use(
@@ -524,7 +1009,7 @@ app.get("/dashboard", (req, res) => {
 });
 
 // Room join route
-app.get("/room/join", (req, res) => {
+app.get("/room/join", async (req, res) => {
   // Check if user is in session
   if (!req.user) {
     return res.redirect("/auth/signin");
@@ -537,42 +1022,71 @@ app.get("/room/join", (req, res) => {
     return res.redirect("/dashboard");
   }
 
-  // In a real implementation, you would fetch the room from a database
-  // For now, we'll check if the room exists in our active rooms
-  const roomExists = activeRooms.has(roomId);
+  try {
+    // Check if room exists in MongoDB
+    const roomData = await safeDBOperation(async () => {
+      return await Room.findOne({ roomId: roomId.toString() });
+    });
 
-  // If room doesn't exist yet but is stored in session (created by this user)
-  const isCreator = roomId.toString() === req.session.lastCreatedRoomId;
+    const roomExists = activeRooms.has(roomId) || roomData;
 
-  // Check if room requires password
-  if (isCreator) {
-    // Room creator doesn't need to enter password
-    console.log(
-      `Room creator ${req.user.fullname || "Anonymous"} is joining room ${roomId}`,
-    );
-  } else if (roomExists) {
-    // For a real app, you would check against a stored password in a database
-    // For this demo, we'll simplify and assume if a password was provided, it's correct
-    const requiresPassword = req.session.isPasswordProtected;
+    // If room doesn't exist yet but is stored in session (created by this user)
+    const isCreator = roomId.toString() === req.session.lastCreatedRoomId;
 
-    if (requiresPassword && !roomPassword) {
-      // Redirect back to dashboard with error
+    // Check if room requires password
+    if (isCreator) {
+      // Room creator doesn't need to enter password
+      console.log(
+        `Room creator ${req.user.fullname || "Anonymous"} is joining room ${roomId}`,
+      );
+    } else if (roomData && roomData.hasPassword) {
+      // Room exists and requires password
+      if (!roomPassword) {
+        // Redirect back to dashboard with error
+        return res.redirect(
+          `/dashboard?error=Password required for room ${roomId}`,
+        );
+      }
+      
+      // Validate password
+      if (roomPassword !== roomData.password) {
+        return res.redirect(
+          `/dashboard?error=Incorrect password for room ${roomId}`,
+        );
+      }
+      
+      console.log(
+        `User ${req.user.fullname || "Anonymous"} is joining password-protected room ${roomId}`,
+      );
+
+      // Update last accessed time
+      await safeDBOperation(async () => {
+        await Room.updateOne(
+          { roomId: roomId.toString() },
+          { lastAccessed: new Date() }
+        );
+      });
+    } else if (roomExists) {
+      console.log(
+        `User ${req.user.fullname || "Anonymous"} is joining room ${roomId}`,
+      );
+    } else {
+      // Room doesn't exist
       return res.redirect(
-        `/dashboard?error=Password required for room ${roomId}`,
+        `/dashboard?error=Room ${roomId} does not exist`,
       );
     }
 
-    console.log(
-      `User ${req.user.fullname || "Anonymous"} is joining room ${roomId}`,
-    );
+    // Redirect to the room
+    res.redirect(`/room/${roomId}`);
+  } catch (error) {
+    console.error("Error accessing room:", error);
+    return res.redirect(`/dashboard?error=Failed to access room ${roomId}`);
   }
-
-  // Redirect to the room
-  res.redirect(`/room/${roomId}`);
 });
 
 // Room creation route
-app.post("/room/create", (req, res) => {
+app.post("/room/create", async (req, res) => {
   // Check if user is in session
   if (!req.user) {
     return res.redirect("/auth/signin");
@@ -588,43 +1102,57 @@ app.post("/room/create", (req, res) => {
     isPasswordProtected,
   } = req.body;
 
-  // Generate a random room ID (6-digit number)
-  const roomId = randomInteger(100000, 999999);
+  try {
+    // Generate a random room ID (6-digit number)
+    const roomId = randomInteger(100000, 999999);
 
-  // In a real implementation, you would save the room to the database
-  // For now, we'll just log the information and redirect to the room
-  console.log("Creating room:", {
-    id: roomId,
-    name: roomName,
-    language: roomLanguage,
-    description: roomDescription,
-    visibility: roomVisibility,
-    hasPassword: isPasswordProtected === "on",
-    password: isPasswordProtected === "on" ? roomPassword : null,
-    createdBy: req.user._id || req.user.id || req.user.googleId,
-    createdAt: new Date(),
-  });
+    // Create room data for MongoDB
+    const isPrivateRoom = roomVisibility === "private";
+    const roomData = {
+      roomId: roomId.toString(),
+      name: roomName,
+      description: roomDescription || "",
+      hasPassword: isPrivateRoom,
+      password: isPrivateRoom ? roomPassword : null,
+      createdBy: req.user.email,
+      createdAt: new Date(),
+      isActive: true,
+      maxUsers: 10,
+      lastAccessed: new Date()
+    };
 
-  // Store room information in session for later use
-  req.session.roomName = roomName;
-  req.session.roomLanguage = roomLanguage;
-  req.session.roomDescription = roomDescription;
-  req.session.roomVisibility = roomVisibility;
+    // Save room to MongoDB
+    await safeDBOperation(async () => {
+      const room = new Room(roomData);
+      await room.save();
+    });
 
-  // Store password if room is password protected
-  if (isPasswordProtected === "on" && roomPassword) {
-    req.session.roomPassword = roomPassword;
-    req.session.isPasswordProtected = true;
-  } else {
-    req.session.roomPassword = null;
-    req.session.isPasswordProtected = false;
+    console.log("Creating room:", roomData);
+
+    // Store room information in session for later use
+    req.session.roomName = roomName;
+    req.session.roomLanguage = roomLanguage;
+    req.session.roomDescription = roomDescription;
+    req.session.roomVisibility = roomVisibility;
+
+    // Store password if room is private
+    if (isPrivateRoom && roomPassword) {
+      req.session.roomPassword = roomPassword;
+      req.session.isPasswordProtected = true;
+    } else {
+      req.session.roomPassword = null;
+      req.session.isPasswordProtected = false;
+    }
+
+    // Store the room ID of the last created room
+    req.session.lastCreatedRoomId = roomId;
+
+    // Redirect to the room page
+    res.redirect(`/room/${roomId}`);
+  } catch (error) {
+    console.error("Error creating room:", error);
+    return res.redirect("/dashboard?error=Failed to create room");
   }
-
-  // Store the room ID of the last created room
-  req.session.lastCreatedRoomId = roomId;
-
-  // Redirect to the room page
-  res.redirect(`/room/${roomId}`);
 });
 
 app.get("/room/:roomId", (req, res) => {
@@ -774,12 +1302,16 @@ app.get(
     const returnTo = req.session.returnTo || "/dashboard";
     delete req.session.returnTo;
 
+    // Create the full redirect URL using the correct base URL
+    const redirectURL = returnTo.startsWith('http') ? returnTo : `${baseURL}${returnTo}`;
+    console.log("Redirecting to:", redirectURL);
+
     // Force session save before redirecting
     req.session.save((err) => {
       if (err) {
         console.error("Error saving session:", err);
       }
-      res.redirect(returnTo);
+      res.redirect(redirectURL);
     });
   },
   function (err, req, res, next) {
@@ -889,7 +1421,10 @@ app.post("/auth/signup", async (req, res) => {
           }
           console.log("User logged in after signup:", data.email);
           console.log("Session ID after signup:", req.sessionID);
-          return res.redirect("/dashboard");
+          // Use relative redirect for local development to maintain session
+          const redirectURL = "/dashboard";
+          console.log("Redirecting after signup to:", redirectURL);
+          return res.redirect(redirectURL);
         });
       } else {
         return res.render("signup.ejs", {
@@ -979,7 +1514,10 @@ app.post("/auth/signin", async (req, res, next) => {
               console.error("Session save error:", saveErr);
             }
             // Redirect to the dashboard after successful login
-            return res.redirect("/dashboard");
+            // Use relative redirect for local development to maintain session
+            const redirectURL = "/dashboard";
+            console.log("Redirecting after login to:", redirectURL);
+            return res.redirect(redirectURL);
           });
         });
       } catch (loginError) {
@@ -1110,42 +1648,68 @@ app.get("/auth/signout", (req, res, next) => {
 });
 
 // Room status API endpoint
-app.get("/api/rooms/status", (req, res) => {
+app.get("/api/rooms/status", async (req, res) => {
   // Check if user is authenticated
   if (!req.user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const roomsStatus = [];
+  try {
+    const roomsStatus = [];
 
-  // Format the rooms data for the response
-  for (const [roomId, users] of activeRooms.entries()) {
-    // Check if this is the room created by the current user
-    const isCreatedByCurrentUser =
-      roomId.toString() === req.session.lastCreatedRoomId;
-
-    roomsStatus.push({
-      roomId,
-      userCount: users.size,
-      isPasswordProtected: isCreatedByCurrentUser
-        ? req.session.isPasswordProtected
-        : false,
-      users: Array.from(users.values()).map((user) => ({
-        userId: user.userId,
-        username: user.username,
-        picture: user.picture,
-      })),
+    // Get all rooms from MongoDB
+    const allRooms = await safeDBOperation(async () => {
+      return await Room.find({ isActive: true }).sort({ lastAccessed: -1 });
     });
-  }
 
-  res.json({
-    activeRooms: roomsStatus,
-    totalRooms: activeRooms.size,
-    totalUsers: [...activeRooms.values()].reduce(
-      (total, users) => total + users.size,
-      0,
-    ),
-  });
+    // Add active rooms (currently connected users)
+    for (const [roomId, users] of activeRooms.entries()) {
+      const roomData = allRooms.find(r => r.roomId === roomId.toString());
+      
+      roomsStatus.push({
+        roomId,
+        name: roomData?.name || `Room ${roomId}`,
+        userCount: users.size,
+        isPasswordProtected: roomData?.hasPassword || false,
+        isActive: true,
+        language: 'javascript', // Default since we removed language field
+        createdBy: roomData?.createdBy || 'Unknown',
+        users: Array.from(users.values()).map((user) => ({
+          userId: user.userId,
+          username: user.username,
+          picture: user.picture,
+        })),
+      });
+    }
+
+    // Add created but not yet active rooms
+    for (const roomData of allRooms) {
+      if (!activeRooms.has(roomData.roomId)) {
+        roomsStatus.push({
+          roomId: roomData.roomId,
+          name: roomData.name,
+          userCount: 0,
+          isPasswordProtected: roomData.hasPassword,
+          isActive: false,
+          language: 'javascript', // Default since we removed language field
+          createdBy: roomData.createdBy,
+          users: [],
+        });
+      }
+    }
+
+    res.json({
+      activeRooms: roomsStatus,
+      totalRooms: roomsStatus.length,
+      totalUsers: [...activeRooms.values()].reduce(
+        (total, users) => total + users.size,
+        0,
+      ),
+    });
+  } catch (error) {
+    console.error("Error fetching rooms status:", error);
+    res.status(500).json({ error: "Failed to fetch rooms status" });
+  }
 });
 
 // Add authentication status endpoint for debugging
@@ -1182,6 +1746,568 @@ app.get("/api/auth-status", (req, res) => {
     });
   }
 });
+
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Available AI models
+const AI_MODELS = {
+  'gemini-2.0-flash-exp': 'Gemini 2.0 Flash (Experimental)',
+  'gemini-1.5-flash': 'Gemini 1.5 Flash',
+  'gemini-1.5-pro': 'Gemini 1.5 Pro',
+  'gemini-1.0-pro': 'Gemini 1.0 Pro'
+};
+
+// AI Chat endpoint
+app.post("/api/ai-chat", async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const { message, context, model = 'gemini-2.0-flash-exp', conversationHistory = [] } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    // Initialize the AI model
+    const aiModel = genAI.getGenerativeModel({ model: model });
+
+    // Create context for the AI
+    let systemPrompt = `You are an AI coding assistant integrated into CodeCollab, a real-time collaborative coding platform. You help developers with:
+
+1. Code explanations and debugging
+2. Suggesting improvements and best practices
+3. Writing code snippets and functions
+4. Explaining programming concepts
+5. Code reviews and optimization suggestions
+
+Current context:
+- User: ${req.user.username || req.user.email}
+- Platform: CodeCollab Real-time Coding Environment
+
+Please provide helpful, accurate, and concise responses. Format code using markdown code blocks with appropriate language tags.`;
+
+    if (context && context.code) {
+      systemPrompt += `\n\nCurrent code in editor (${context.language || 'unknown'}):\n\`\`\`${context.language || ''}\n${context.code}\n\`\`\``;
+    }
+
+    if (context && context.selectedText) {
+      systemPrompt += `\n\nSelected text: "${context.selectedText}"`;
+    }
+
+    // Build conversation history
+    let chatHistory = [];
+    
+    // Add system prompt
+    chatHistory.push({
+      role: "user",
+      parts: [{ text: systemPrompt }]
+    });
+    
+    chatHistory.push({
+      role: "model", 
+      parts: [{ text: "I'm your AI coding assistant! I'm ready to help you with coding questions, debugging, code reviews, and programming guidance. What would you like help with?" }]
+    });
+
+    // Add conversation history
+    conversationHistory.forEach(msg => {
+      if (msg.role === 'user' || msg.role === 'assistant') {
+        chatHistory.push({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }]
+        });
+      }
+    });
+
+    // Add current message
+    chatHistory.push({
+      role: "user",
+      parts: [{ text: message }]
+    });
+
+    const chat = aiModel.startChat({
+      history: chatHistory.slice(0, -1), // Don't include the current message in history
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40,
+      },
+    });
+
+    const result = await chat.sendMessage(message);
+    const response = await result.response;
+    const aiResponse = response.text();
+
+    res.json({
+      response: aiResponse,
+      model: model,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error("AI Chat error:", error);
+    res.status(500).json({ 
+      error: "Failed to get AI response",
+      details: error.message 
+    });
+  }
+});
+
+// Get available AI models
+app.get("/api/ai-models", (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  res.json({
+    models: AI_MODELS,
+    defaultModel: 'gemini-2.0-flash-exp'
+  });
+});
+
+// AI Code Analysis endpoint
+app.post("/api/ai-analyze", async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const { code, language, analysisType = 'general' } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: "Code is required" });
+    }
+
+    const aiModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+
+    let prompt = '';
+    
+    switch (analysisType) {
+      case 'debug':
+        prompt = `Please analyze this ${language} code for potential bugs, errors, or issues:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nProvide specific suggestions for fixes and improvements.`;
+        break;
+      case 'optimize':
+        prompt = `Please analyze this ${language} code for performance optimizations and best practices:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nSuggest specific improvements for better performance, readability, and maintainability.`;
+        break;
+      case 'explain':
+        prompt = `Please explain what this ${language} code does, line by line:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nProvide a clear explanation of the code's functionality and logic.`;
+        break;
+      default:
+        prompt = `Please provide a general analysis of this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nInclude observations about code quality, potential issues, and suggestions for improvement.`;
+    }
+
+    const result = await aiModel.generateContent(prompt);
+    const response = await result.response;
+    const analysis = response.text();
+
+    res.json({
+      analysis: analysis,
+      analysisType: analysisType,
+      language: language,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error("AI Analysis error:", error);
+    res.status(500).json({ 
+      error: "Failed to analyze code",
+      details: error.message 
+    });
+  }
+});
+
+// AI Chat endpoint
+app.post("/api/ai-chat", async (req, res) => {
+  // Check if user is authenticated
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const { message, model, roomId } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    console.log(`AI Chat request from ${req.user.email} in room ${roomId} using model ${model}`);
+
+    // For now, we'll use Gemini 2.0 Flash as the primary model
+    // You can extend this to handle multiple models
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error("Gemini API key not configured");
+    }
+
+    // Call Gemini API
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `You are a helpful AI coding assistant integrated into a collaborative code editor called CodeCollab. You help developers with code reviews, debugging, explanations, and best practices. Keep your responses concise but helpful, and use markdown formatting when appropriate.
+
+User question: ${message}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
+      })
+    });
+
+    if (!geminiResponse.ok) {
+      const errorData = await geminiResponse.text();
+      console.error('Gemini API error:', errorData);
+      throw new Error(`Gemini API error: ${geminiResponse.status}`);
+    }
+
+    const geminiData = await geminiResponse.json();
+    
+    if (geminiData.candidates && geminiData.candidates[0] && geminiData.candidates[0].content) {
+      const aiResponse = geminiData.candidates[0].content.parts[0].text;
+      
+      // Format the response with basic markdown to HTML conversion
+      const formattedResponse = aiResponse
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>');
+
+      res.json({
+        response: formattedResponse,
+        model: model,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.error('Unexpected Gemini response structure:', geminiData);
+      throw new Error('Invalid response from AI service');
+    }
+
+  } catch (error) {
+    console.error("AI Chat error:", error);
+    res.status(500).json({
+      error: "Failed to get AI response",
+      message: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// AI Autocomplete endpoint
+app.post("/api/ai-autocomplete", async (req, res) => {
+  // Check if user is authenticated
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const { language, context, currentLine, cursorPosition, textBeforeCursor, fullCode, isShortInput, wordCount } = req.body;
+
+    if (!language || !context) {
+      return res.status(400).json({ error: "Language and context are required" });
+    }
+
+    console.log(`AI Autocomplete: "${textBeforeCursor}" (${wordCount} words) in ${language}`);
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error("Gemini API key not configured");
+    }
+
+    // Enhanced prompt for better 1-4 word completions
+    let prompt;
+    
+    if (isShortInput && wordCount <= 4) {
+      // Special handling for short inputs (1-4 words)
+      prompt = `You are an expert code completion AI. The user typed "${textBeforeCursor}" in ${language}. Analyze this input and provide intelligent code completions.
+
+Context:
+\`\`\`${language}
+${context}
+\`\`\`
+
+Full file context (last 500 chars):
+\`\`\`
+${(fullCode || '').slice(-500)}
+\`\`\`
+
+For the input "${textBeforeCursor}", provide 3-5 smart completions as JSON array:
+
+Instructions:
+1. If it's a partial function/method name, complete with parameters
+2. If it's a variable declaration, suggest appropriate assignments
+3. If it's a control structure keyword, provide the full syntax
+4. If it's an object/class reference, suggest methods/properties
+5. Consider the existing code context for relevant suggestions
+
+Each completion should have:
+- "text": exact code to insert
+- "label": short description for display
+- "type": "function", "variable", "class", "keyword", "snippet", "method", "property"
+- "description": what this completion does
+- "insertText": code with $1, $2 placeholders for tab stops
+
+Return ONLY the JSON array:`;
+    } else {
+      // Regular prompt for longer inputs
+      prompt = `You are an AI code completion assistant. Provide intelligent code completions for the given context.
+
+Language: ${language}
+Current line: "${currentLine}"
+Text before cursor: "${textBeforeCursor}"
+Context:
+\`\`\`${language}
+${context}
+\`\`\`
+
+Provide 3-5 relevant code completions as a JSON array. Each completion should have:
+- "text": the code to insert
+- "label": display label for the suggestion
+- "type": one of "method", "function", "class", "variable", "property", "keyword", "snippet"
+- "description": brief description of what this completion does
+- "insertText": exact text to insert (can include snippets with $1, $2 placeholders)
+
+Focus on:
+1. Context-aware completions based on the current code
+2. Common patterns for the programming language
+3. Method/property completions if there's a dot notation
+4. Variable/function completions based on existing code
+5. Language-specific keywords and constructs
+
+Return only the JSON array, no other text.`;
+    }
+
+    // Call Gemini API with a more focused configuration for autocomplete
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.3, // Lower temperature for more consistent completions
+          topK: 20,
+          topP: 0.8,
+          maxOutputTokens: 512, // Smaller response for faster autocomplete
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
+      })
+    });
+
+    if (!geminiResponse.ok) {
+      const errorData = await geminiResponse.text();
+      console.error('Gemini API error for autocomplete:', errorData);
+      // Return empty suggestions instead of error for better UX
+      return res.json({ suggestions: [] });
+    }
+
+    const geminiData = await geminiResponse.json();
+    
+    if (geminiData.candidates && geminiData.candidates[0] && geminiData.candidates[0].content) {
+      const aiResponse = geminiData.candidates[0].content.parts[0].text;
+      
+      try {
+        // Try to parse the JSON response
+        const cleanResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const suggestions = JSON.parse(cleanResponse);
+        
+        // Validate and sanitize suggestions
+        const validSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => 
+          s && typeof s === 'object' && s.text && s.label
+        ).slice(0, 5) : []; // Limit to 5 suggestions
+        
+        res.json({ 
+          suggestions: validSuggestions,
+          timestamp: new Date().toISOString()
+        });
+      } catch (parseError) {
+        console.error('Failed to parse AI autocomplete response:', parseError);
+        console.error('Raw response:', aiResponse);
+        
+        // Fallback: try to extract simple completions from the response
+        const fallbackSuggestions = extractFallbackSuggestions(aiResponse, textBeforeCursor);
+        res.json({ 
+          suggestions: fallbackSuggestions,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      console.error('Unexpected Gemini response structure for autocomplete:', geminiData);
+      res.json({ suggestions: [] });
+    }
+
+  } catch (error) {
+    console.error("AI Autocomplete error:", error);
+    // Return empty suggestions instead of error for better UX
+    res.json({ 
+      suggestions: [],
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Helper function to extract fallback suggestions when JSON parsing fails
+function extractFallbackSuggestions(response, textBeforeCursor, language) {
+  const suggestions = [];
+  const lines = response.split('\n');
+  
+  // Try to extract meaningful code suggestions from the response
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && trimmed.length > 0) {
+      // Look for code-like patterns
+      if (trimmed.includes('(') || trimmed.includes('.') || /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trimmed)) {
+        let insertText = trimmed;
+        let type = 'text';
+        
+        // Determine suggestion type based on content
+        if (trimmed.includes('function') || trimmed.includes('def ')) {
+          type = 'function';
+        } else if (trimmed.includes('class ')) {
+          type = 'class';
+        } else if (trimmed.includes('if ') || trimmed.includes('for ') || trimmed.includes('while ')) {
+          type = 'keyword';
+        } else if (trimmed.includes('(')) {
+          type = 'method';
+        } else if (trimmed.includes('.')) {
+          type = 'property';
+        }
+        
+        suggestions.push({
+          text: insertText,
+          label: insertText.length > 50 ? insertText.substring(0, 50) + '...' : insertText,
+          type: type,
+          description: `AI suggestion for "${textBeforeCursor}"`,
+          insertText: insertText
+        });
+        
+        if (suggestions.length >= 5) break;
+      }
+    }
+  }
+  
+  // If no good suggestions found, provide language-specific fallbacks
+  if (suggestions.length === 0) {
+    const fallbacks = getLanguageSpecificFallbacks(textBeforeCursor, language);
+    suggestions.push(...fallbacks);
+  }
+  
+  return suggestions;
+}
+
+// Get language-specific fallback suggestions
+function getLanguageSpecificFallbacks(textBeforeCursor, language) {
+  const suggestions = [];
+  const input = textBeforeCursor.toLowerCase().trim();
+  
+  if (language === 'javascript' || language === 'typescript') {
+    if (input.includes('func') || input === 'f') {
+      suggestions.push({
+        text: 'function ${1:name}(${2:params}) {\n\t${3:// code}\n\treturn ${4:value};\n}',
+        label: 'function declaration',
+        type: 'function',
+        description: 'Create a function',
+        insertText: 'function ${1:name}(${2:params}) {\n\t${3:// code}\n\treturn ${4:value};\n}'
+      });
+    }
+    
+    if (input.includes('const') || input === 'c') {
+      suggestions.push({
+        text: 'const ${1:name} = ${2:value};',
+        label: 'const declaration',
+        type: 'variable',
+        description: 'Create a constant',
+        insertText: 'const ${1:name} = ${2:value};'
+      });
+    }
+    
+    if (input.includes('if') || input === 'i') {
+      suggestions.push({
+        text: 'if (${1:condition}) {\n\t${2:// code}\n}',
+        label: 'if statement',
+        type: 'keyword',
+        description: 'Create an if statement',
+        insertText: 'if (${1:condition}) {\n\t${2:// code}\n}'
+      });
+    }
+  } else if (language === 'python') {
+    if (input.includes('def') || input === 'd') {
+      suggestions.push({
+        text: 'def ${1:function_name}(${2:params}):\n    """${3:docstring}"""\n    ${4:pass}',
+        label: 'function definition',
+        type: 'function',
+        description: 'Create a Python function',
+        insertText: 'def ${1:function_name}(${2:params}):\n    """${3:docstring}"""\n    ${4:pass}'
+      });
+    }
+    
+    if (input.includes('class') || input === 'cl') {
+      suggestions.push({
+        text: 'class ${1:ClassName}:\n    """${2:docstring}"""\n    \n    def __init__(self, ${3:params}):\n        ${4:pass}',
+        label: 'class definition',
+        type: 'class',
+        description: 'Create a Python class',
+        insertText: 'class ${1:ClassName}:\n    """${2:docstring}"""\n    \n    def __init__(self, ${3:params}):\n        ${4:pass}'
+      });
+    }
+  }
+  
+  return suggestions;
+}
 
 // Vercel debug page route
 app.get("/vercel-debug", (req, res) => {
@@ -1469,41 +2595,37 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // In a real implementation, you would use a sandboxed environment
-    // to execute the code securely. For this example, we'll simulate a response.
     console.log(
       `Running ${language} code for user ${username} in room ${roomId}`,
     );
 
-    // Simulate code execution after a delay
-    setTimeout(() => {
-      let result, error;
-
-      // Simple simulation of execution results
-      try {
-        if (language.toLowerCase().includes("javascript")) {
-          // For demo purposes only - this is not secure!
-          // In production, use proper sandboxing solutions
-          result =
-            "Console output would appear here\n> JavaScript execution complete";
-        } else if (language.toLowerCase().includes("python")) {
-          result = `Python 3.9.5 (default, May 4 2021, 03:36:27) \n[Clang 12.0.0 (clang-1200.0.32.29)] on darwin\n> Output: Hello, world!\n> Python execution complete`;
-        } else {
-          result = `Executed ${language} code from ${fileName} successfully.\n> Output would appear here\n> Execution complete`;
-        }
-      } catch (err) {
-        error = err.message;
-      }
-
-      // Send result back to the room
-      io.to(roomId).emit("code_result", {
-        result,
-        error,
-        language,
-        userId,
-        timestamp: Date.now(),
+    // Execute code asynchronously
+    executeCode(code, language, fileName)
+      .then((result) => {
+        // Send result back to the room
+        io.to(roomId).emit("code_result", {
+          result: result.output,
+          error: result.error,
+          language,
+          userId,
+          username,
+          fileName,
+          timestamp: Date.now(),
+          executionTime: result.executionTime
+        });
+      })
+      .catch((error) => {
+        // Send error back to the room
+        io.to(roomId).emit("code_result", {
+          result: null,
+          error: error.message,
+          language,
+          userId,
+          username,
+          fileName,
+          timestamp: Date.now()
+        });
       });
-    }, 1000);
   });
 
   // Handle bash command execution

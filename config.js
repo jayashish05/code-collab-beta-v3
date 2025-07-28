@@ -203,6 +203,57 @@ const loginschema = new mongoose.Schema({
 // Add compound index for more efficient lookups
 loginschema.index({ email: 1, authType: 1 });
 
-const collection = mongoose.model("users", loginschema);
+// Room schema for storing room data
+const roomSchema = new mongoose.Schema({
+  roomId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: false
+  },
+  hasPassword: {
+    type: Boolean,
+    default: false
+  },
+  password: {
+    type: String,
+    required: false
+  },
+  createdBy: {
+    type: String, // User email or ID
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  maxUsers: {
+    type: Number,
+    default: 10
+  },
+  // Track when room was last accessed for cleanup
+  lastAccessed: {
+    type: Date,
+    default: Date.now
+  }
+});
 
-export { collection, connectDB, ensureDBConnection, safeDBOperation };
+// Add indexes for efficient room lookups
+roomSchema.index({ createdBy: 1 });
+roomSchema.index({ isActive: 1 });
+
+const collection = mongoose.model("users", loginschema);
+const Room = mongoose.model("rooms", roomSchema);
+
+export { collection, Room, connectDB, ensureDBConnection, safeDBOperation };
