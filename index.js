@@ -1,5 +1,5 @@
 import express from "express";
-import { collection, Room, safeDBOperation, ensureDBConnection, connectDB } from "./config.js";
+import { collection, Room, safeDBOperation, ensureDBConnection, connectDB, trackUserActivity, startCodingSession, updateCodingSession, endCodingSession, trackCodeExecution, saveRoomCode, loadRoomCode, saveRoomFile, autoSaveRoomData } from "./config.js";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -17,6 +17,7 @@ import crypto from "crypto"; // Add crypto import for session ID generation
 import { exec, spawn } from "child_process"; // Add for code execution
 import { promisify } from "util"; // Add for promisifying exec
 import { GoogleGenerativeAI } from "@google/generative-ai"; // Add Gemini AI integration
+import Razorpay from "razorpay"; // Add Razorpay for payments
 
 // Validate required environment variables for Vercel
 const requiredEnvVars = ['MONGODB_URI'];
@@ -40,8 +41,16 @@ console.log('SESSION_SECRET:', process.env.SESSION_SECRET ? 'Set' : 'Using defau
 console.log('CLIENT_ID:', process.env.CLIENT_ID ? 'Set' : 'Not set');
 console.log('CLIENT_GOOGLE_SECRET:', process.env.CLIENT_GOOGLE_SECRET ? 'Set' : 'Not set');
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Not set');
+console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID ? 'Set' : 'Not set');
+console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'Set' : 'Not set');
 
 dotenv.config();
+
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 // Initialize database connection
 console.log('Initializing database connection...');
@@ -973,7 +982,7 @@ app.get("/", (req, res) => {
   }
 });
 
-app.get("/dashboard", (req, res) => {
+app.get("/dashboard", async (req, res) => {
   console.log("Dashboard route accessed");
   console.log("Session ID:", req.sessionID);
   console.log("Is authenticated:", req.isAuthenticated());
@@ -983,6 +992,25 @@ app.get("/dashboard", (req, res) => {
   try {
     // Check if user is authenticated
     if (req.isAuthenticated() && req.user) {
+      // Update user activity - track login
+      await safeDBOperation(async () => {
+        await collection.updateOne(
+          { email: req.user.email },
+          { 
+            $set: { 
+              "activity.lastLogin": new Date()
+            },
+            $inc: {
+              "activity.totalLogins": 1
+            }
+          }
+        );
+      });
+
+      // Track login activity and start coding session
+      await trackUserActivity(req.user.email, 'login', 'Signed in to CodeCollab', `Login from dashboard`);
+      await startCodingSession(req.user.email);
+
       // Get success message if it exists
       const loginSuccess = req.session.loginSuccess;
       delete req.session.loginSuccess;
@@ -1007,6 +1035,348 @@ app.get("/dashboard", (req, res) => {
     });
   }
 });
+
+// Profile route
+app.get("/profile", async (req, res) => {
+  console.log("Profile route accessed");
+  console.log("Session ID:", req.sessionID);
+  console.log("Is authenticated:", req.isAuthenticated());
+  console.log("User in session:", req.user);
+
+  try {
+    // Check if user is authenticated
+    if (req.isAuthenticated() && req.user) {
+      // Get user stats from database
+      const userStats = await safeDBOperation(async () => {
+        // Get user data with stats
+        const userData = await collection.findOne({ 
+          email: req.user.email 
+        });
+
+        // Get rooms created by user
+        const roomsCreated = await Room.countDocuments({ 
+          createdBy: req.user.email 
+        });
+
+        // Get real statistics from database
+        const collaborations = userData?.activity?.roomsJoined || 0;
+        const totalCodingHours = Math.floor((userData?.activity?.totalCodingTimeMinutes || 0) / 60);
+        const totalCodingMinutes = (userData?.activity?.totalCodingTimeMinutes || 0) % 60;
+        const linesOfCode = userData?.activity?.totalLinesOfCode || 0;
+
+        return {
+          roomsCreated,
+          collaborations,
+          totalCodingHours,
+          totalCodingMinutes,
+          linesOfCode,
+          lastLogin: userData?.activity?.lastLogin,
+          totalLogins: userData?.activity?.totalLogins || 0,
+          codeExecutions: userData?.activity?.codeExecutions || 0,
+          aiRequestsTotal: userData?.activity?.aiRequestsTotal || 0,
+          recentActivities: userData?.activity?.recentActivities || [],
+          recentCodeSnippets: userData?.activity?.recentCodeSnippets || []
+        };
+      });
+
+      return res.render("profile.ejs", {
+        title: "Profile",
+        user: req.user,
+        stats: userStats
+      });
+    } else {
+      console.log("User not authenticated, redirecting to signin");
+      return res.redirect("/auth/signin?error=authentication_required");
+    }
+  } catch (error) {
+    console.error("Profile route error:", error);
+    console.error("Profile route error stack:", error.stack);
+    return res.status(500).render("signin.ejs", {
+      title: "Sign In",
+      error: "An error occurred accessing your profile. Please sign in again.",
+    });
+  }
+});
+
+// Profile API endpoints
+// Update user preferences
+app.post("/api/profile/preferences", async (req, res) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    const { notifications, theme, defaultLanguage } = req.body;
+    
+    await safeDBOperation(async () => {
+      await collection.updateOne(
+        { email: req.user.email },
+        { 
+          $set: { 
+            "preferences.notifications": notifications,
+            "preferences.theme": theme,
+            "preferences.defaultLanguage": defaultLanguage
+          } 
+        }
+      );
+    });
+
+    res.json({ success: true, message: "Preferences updated successfully" });
+  } catch (error) {
+    console.error("Error updating preferences:", error);
+    res.status(500).json({ error: "Failed to update preferences" });
+  }
+});
+
+// Update user profile
+app.post("/api/profile/update", async (req, res) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    const { fullname, picture } = req.body;
+    
+    await safeDBOperation(async () => {
+      await collection.updateOne(
+        { email: req.user.email },
+        { 
+          $set: { 
+            fullname: fullname,
+            picture: picture
+          } 
+        }
+      );
+    });
+
+    // Update session user data
+    req.user.fullname = fullname;
+    req.user.picture = picture;
+
+    res.json({ success: true, message: "Profile updated successfully" });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+// Get user activity
+app.get("/api/profile/activity", async (req, res) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    const activities = await safeDBOperation(async () => {
+      const userData = await collection.findOne({ 
+        email: req.user.email 
+      });
+
+      const recentActivities = userData?.activity?.recentActivities || [];
+      
+      // Format activities for display
+      const formattedActivities = recentActivities
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, 10)
+        .map(activity => {
+          const timeAgo = getTimeAgo(activity.timestamp);
+          return {
+            type: activity.type,
+            title: activity.title,
+            time: timeAgo,
+            icon: getIconForActivityType(activity.type),
+            description: activity.description,
+            metadata: activity.metadata
+          };
+        });
+
+      return formattedActivities;
+    });
+
+    res.json({ success: true, activities });
+  } catch (error) {
+    console.error("Error fetching activity:", error);
+    res.status(500).json({ error: "Failed to fetch activity" });
+  }
+});
+
+// Export user data
+app.get("/api/profile/export", async (req, res) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    const userData = await safeDBOperation(async () => {
+      const user = await collection.findOne({ email: req.user.email });
+      const userRooms = await Room.find({ createdBy: req.user.email });
+
+      return {
+        profile: {
+          fullname: user?.fullname,
+          email: user?.email,
+          authType: user?.authType,
+          createdAt: user?.createdAt,
+          lastLogin: user?.activity?.lastLogin,
+          totalLogins: user?.activity?.totalLogins
+        },
+        activity: user?.activity,
+        preferences: user?.preferences,
+        rooms: userRooms.map(room => ({
+          roomId: room.roomId,
+          roomName: room.roomName,
+          createdAt: room.createdAt,
+          isActive: room.isActive
+        }))
+      };
+    });
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename=codecollab-profile-data.json');
+    res.json(userData);
+  } catch (error) {
+    console.error("Error exporting data:", error);
+    res.status(500).json({ error: "Failed to export data" });
+  }
+});
+
+// Delete user account
+app.delete("/api/profile/delete", async (req, res) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    await safeDBOperation(async () => {
+      // Delete user's rooms
+      await Room.deleteMany({ createdBy: req.user.email });
+      
+      // Delete user account
+      await collection.deleteOne({ email: req.user.email });
+    });
+
+    // Logout user
+    req.logout((err) => {
+      if (err) {
+        console.error("Error logging out:", err);
+      }
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+        }
+        res.json({ success: true, message: "Account deleted successfully" });
+      });
+    });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    res.status(500).json({ error: "Failed to delete account" });
+  }
+});
+
+// Reset user account (keep account but reset data)
+app.post("/api/profile/reset", async (req, res) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    await safeDBOperation(async () => {
+      // Delete user's rooms
+      await Room.deleteMany({ createdBy: req.user.email });
+      
+      // Reset user activity data
+      await collection.updateOne(
+        { email: req.user.email },
+        { 
+          $set: { 
+            "activity.roomsJoined": 0,
+            "activity.codeExecutions": 0,
+            "activity.aiRequestsTotal": 0
+          } 
+        }
+      );
+    });
+
+    res.json({ success: true, message: "Account reset successfully" });
+  } catch (error) {
+    console.error("Error resetting account:", error);
+    res.status(500).json({ error: "Failed to reset account" });
+  }
+});
+
+// Refresh profile statistics
+app.get("/api/profile/refresh-stats", async (req, res) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    const userStats = await safeDBOperation(async () => {
+      const userData = await collection.findOne({ 
+        email: req.user.email 
+      });
+
+      const roomsCreated = await Room.countDocuments({ 
+        createdBy: req.user.email 
+      });
+
+      const collaborations = userData?.activity?.roomsJoined || 0;
+      const totalCodingHours = Math.floor((userData?.activity?.totalCodingTimeMinutes || 0) / 60);
+      const totalCodingMinutes = (userData?.activity?.totalCodingTimeMinutes || 0) % 60;
+      const linesOfCode = userData?.activity?.totalLinesOfCode || 0;
+      const codeExecutions = userData?.activity?.codeExecutions || 0;
+
+      return {
+        roomsCreated,
+        collaborations,
+        totalCodingHours,
+        totalCodingMinutes,
+        linesOfCode,
+        codeExecutions
+      };
+    });
+
+    res.json({ success: true, stats: userStats });
+  } catch (error) {
+    console.error("Error refreshing stats:", error);
+    res.status(500).json({ error: "Failed to refresh statistics" });
+  }
+});
+
+// Helper functions for activity formatting
+function getTimeAgo(timestamp) {
+  const now = new Date();
+  const time = new Date(timestamp);
+  const diffInSeconds = Math.floor((now - time) / 1000);
+  
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  } else if (diffInSeconds < 604800) {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  } else {
+    return time.toLocaleDateString();
+  }
+}
+
+function getIconForActivityType(activityType) {
+  const icons = {
+    'login': 'person-check',
+    'room_created': 'plus-circle',
+    'room_joined': 'people',
+    'code_executed': 'play-circle',
+    'ai_request': 'robot',
+    'file_saved': 'save',
+    'collaboration': 'people-fill'
+  };
+  return icons[activityType] || 'activity';
+}
 
 // Room join route
 app.get("/room/join", async (req, res) => {
@@ -1106,6 +1476,32 @@ app.post("/room/create", async (req, res) => {
     // Generate a random room ID (6-digit number)
     const roomId = randomInteger(100000, 999999);
 
+    // Check user subscription to set room capacity
+    let maxUsers = 4; // Default for free users
+    try {
+      const user = await safeDBOperation(async () => {
+        return await collection.findOne({
+          $or: [
+            { email: req.user.email },
+            { googleId: req.user.googleId },
+            { _id: req.user._id }
+          ]
+        });
+      });
+
+      const subscription = user?.subscription || { isPro: false };
+      
+      // Check if subscription has expired
+      if (subscription.isPro && subscription.subscriptionEnd && new Date() > new Date(subscription.subscriptionEnd)) {
+        subscription.isPro = false;
+      }
+
+      maxUsers = subscription.isPro ? 50 : 4; // Pro users get 50, free users get 4
+    } catch (error) {
+      console.error("Error checking subscription for room creation:", error);
+      // Default to free plan on error
+    }
+
     // Create room data for MongoDB
     const isPrivateRoom = roomVisibility === "private";
     const roomData = {
@@ -1117,7 +1513,7 @@ app.post("/room/create", async (req, res) => {
       createdBy: req.user.email,
       createdAt: new Date(),
       isActive: true,
-      maxUsers: 10,
+      maxUsers: maxUsers,
       lastAccessed: new Date()
     };
 
@@ -1126,6 +1522,15 @@ app.post("/room/create", async (req, res) => {
       const room = new Room(roomData);
       await room.save();
     });
+
+    // Track room creation activity
+    await trackUserActivity(
+      req.user.email, 
+      'room_created', 
+      `Created room: ${roomName}`,
+      `${roomVisibility} room with ${roomLanguage} language`,
+      { roomId, roomName, language: roomLanguage, visibility: roomVisibility }
+    );
 
     console.log("Creating room:", roomData);
 
@@ -1155,45 +1560,87 @@ app.post("/room/create", async (req, res) => {
   }
 });
 
-app.get("/room/:roomId", (req, res) => {
+app.get("/room/:roomId", async (req, res) => {
   console.log("Room route accessed, user in session:", req.user);
   // Check if user is in session
   if (req.user) {
-    // In a real implementation, you would fetch room data from the database
     const roomId = req.params.roomId;
 
-    // For now, we'll create mock data based on the roomId
-    const roomData = {
-      name: req.session.roomName || "Coding Room " + roomId,
-      language: req.session.roomLanguage || "JavaScript",
-      id: roomId,
-      description: req.session.roomDescription || "A collaborative coding room",
-      visibility: req.session.roomVisibility || "public",
-      isPasswordProtected: req.session.isPasswordProtected || false,
-      createdAt: new Date(),
-      createdBy: req.user._id || req.user.id || req.user.googleId,
-      files: [
-        { name: "index.js", type: "js", content: "// JavaScript code here" },
-        {
-          name: "index.html",
-          type: "html",
-          content: "<!-- HTML code here -->",
-        },
-        { name: "styles.css", type: "css", content: "/* CSS code here */" },
-      ],
-    };
+    try {
+      // Load room data from database
+      const roomData = await safeDBOperation(async () => {
+        const room = await Room.findOne({ roomId: roomId });
+        return room;
+      });
 
-    // Clear session variables after use
-    delete req.session.roomName;
-    delete req.session.roomLanguage;
-    delete req.session.roomDescription;
-    delete req.session.roomVisibility;
+      // Load saved code and files
+      const savedRoomData = await loadRoomCode(roomId);
 
-    res.render("room.ejs", {
-      title: roomData.name + " | CodeCollab",
-      roomData,
-      req, // Pass the request object to access user details in the template
-    });
+      // Create room response data
+      const roomResponse = {
+        name: roomData?.name || req.session.roomName || "Coding Room " + roomId,
+        language: savedRoomData.language || req.session.roomLanguage || "javascript",
+        id: roomId,
+        description: roomData?.description || req.session.roomDescription || "A collaborative coding room",
+        visibility: req.session.roomVisibility || "public",
+        isPasswordProtected: roomData?.hasPassword || req.session.isPasswordProtected || false,
+        createdAt: roomData?.createdAt || new Date(),
+        createdBy: roomData?.createdBy || req.user.email || req.user._id || req.user.id || req.user.googleId,
+        currentCode: savedRoomData.code || '',
+        savedFiles: savedRoomData.files || [],
+        files: savedRoomData.files.length > 0 ? 
+          savedRoomData.files.map(file => ({
+            name: file.name,
+            type: file.language,
+            content: file.content,
+            language: file.language
+          })) : 
+          [
+            { name: "index.js", type: "js", content: savedRoomData.code || "// JavaScript code here", language: "javascript" },
+            { name: "index.html", type: "html", content: "<!-- HTML code here -->", language: "html" },
+            { name: "styles.css", type: "css", content: "/* CSS code here */", language: "css" },
+          ],
+      };
+
+      // Clear session variables after use
+      delete req.session.roomName;
+      delete req.session.roomLanguage;
+      delete req.session.roomDescription;
+      delete req.session.roomVisibility;
+
+      res.render("room.ejs", {
+        title: roomResponse.name + " | CodeCollab",
+        roomData: roomResponse,
+        req, // Pass the request object to access user details in the template
+      });
+
+    } catch (error) {
+      console.error("Error loading room:", error);
+      
+      // Fallback to default room data
+      const fallbackRoomData = {
+        name: req.session.roomName || "Coding Room " + roomId,
+        language: req.session.roomLanguage || "javascript",
+        id: roomId,
+        description: req.session.roomDescription || "A collaborative coding room",
+        visibility: req.session.roomVisibility || "public",
+        isPasswordProtected: req.session.isPasswordProtected || false,
+        createdAt: new Date(),
+        createdBy: req.user.email || req.user._id || req.user.id || req.user.googleId,
+        currentCode: '',
+        files: [
+          { name: "index.js", type: "js", content: "// JavaScript code here", language: "javascript" },
+          { name: "index.html", type: "html", content: "<!-- HTML code here -->", language: "html" },
+          { name: "styles.css", type: "css", content: "/* CSS code here */", language: "css" },
+        ],
+      };
+
+      res.render("room.ejs", {
+        title: fallbackRoomData.name + " | CodeCollab",
+        roomData: fallbackRoomData,
+        req,
+      });
+    }
   } else {
     res.redirect("/auth/signin?error=authentication_required");
   }
@@ -1647,6 +2094,430 @@ app.get("/auth/signout", (req, res, next) => {
   }
 });
 
+// Payment Routes
+app.get("/payment", (req, res) => {
+  // Check if user is authenticated
+  if (!req.user) {
+    return res.redirect("/auth/signin?error=authentication_required");
+  }
+
+  // Check if user is already pro
+  if (req.user.subscription && req.user.subscription.isPro) {
+    return res.redirect("/dashboard?message=You are already a Pro member!");
+  }
+
+  res.render("payment.ejs", {
+    title: "Upgrade to CodeCollab Pro",
+    user: req.user,
+    razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+    error: req.query.error || null,
+    success: req.query.success || null
+  });
+});
+
+// Create payment order
+app.post("/api/payment/create-order", async (req, res) => {
+  try {
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "User not authenticated" 
+      });
+    }
+
+    // Check if user is already pro
+    if (req.user.subscription && req.user.subscription.isPro) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User is already a Pro member" 
+      });
+    }
+
+    const { amount, currency } = req.body;
+
+    // Validate amount (₹99 = 9900 paise)
+    if (amount !== 9900) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid amount" 
+      });
+    }
+
+    // Create Razorpay order
+    const orderOptions = {
+      amount: amount, // Amount in paise
+      currency: currency || 'INR',
+      receipt: `codecollab_pro_${req.user.email}_${Date.now()}`,
+      notes: {
+        user_email: req.user.email,
+        subscription_type: 'pro_monthly',
+        user_id: req.user._id?.toString() || req.user.googleId
+      }
+    };
+
+    const order = await razorpay.orders.create(orderOptions);
+    
+    console.log("Created Razorpay order:", order.id);
+
+    res.json({
+      success: true,
+      order: {
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency
+      }
+    });
+
+  } catch (error) {
+    console.error("Payment order creation error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to create payment order: " + error.message 
+    });
+  }
+});
+
+// Verify payment
+app.post("/api/payment/verify", async (req, res) => {
+  try {
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "User not authenticated" 
+      });
+    }
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    // Verify payment signature
+    const crypto = await import('crypto');
+    const expectedSignature = crypto.default
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid payment signature" 
+      });
+    }
+
+    // Fetch payment details from Razorpay
+    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+    
+    if (payment.status !== 'captured') {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Payment not captured" 
+      });
+    }
+
+    // Update user subscription in database
+    const subscriptionEnd = new Date();
+    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1); // Add 1 month
+
+    const updateResult = await safeDBOperation(async () => {
+      return await collection.updateOne(
+        { 
+          $or: [
+            { email: req.user.email },
+            { googleId: req.user.googleId },
+            { _id: req.user._id }
+          ]
+        },
+        {
+          $set: {
+            'subscription.isPro': true,
+            'subscription.planType': 'pro',
+            'subscription.subscriptionStart': new Date(),
+            'subscription.subscriptionEnd': subscriptionEnd,
+            'subscription.autoRenew': true,
+            'subscription.paymentId': razorpay_payment_id,
+            // Enable all Pro features
+            'subscription.features.aiChatEnabled': true,
+            'subscription.features.aiCodeAnalysisEnabled': true,
+            'subscription.features.unlimitedRooms': true,
+            'subscription.features.prioritySupport': true,
+            'subscription.features.advancedCollaboration': true,
+            // Update limits for Pro users
+            'subscription.limits.maxRoomCapacity': 50,
+            'subscription.limits.aiRequestsPerDay': 1000
+          },
+          $push: {
+            'subscription.paymentHistory': {
+              paymentId: razorpay_payment_id,
+              orderId: razorpay_order_id,
+              amount: payment.amount,
+              currency: payment.currency,
+              status: payment.status,
+              createdAt: new Date()
+            }
+          }
+        }
+      );
+    });
+
+    if (updateResult.modifiedCount === 0) {
+      console.error("Failed to update user subscription");
+      return res.status(500).json({ 
+        success: false, 
+        message: "Failed to update subscription" 
+      });
+    }
+
+    console.log(`User ${req.user.email} upgraded to Pro successfully`);
+
+    res.json({
+      success: true,
+      message: "Payment verified and subscription activated successfully"
+    });
+
+  } catch (error) {
+    console.error("Payment verification error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Payment verification failed: " + error.message 
+    });
+  }
+});
+
+// Get Pro features list
+app.get("/api/pro-features", (req, res) => {
+  const proFeatures = {
+    unlimitedRooms: {
+      name: "Unlimited Room Capacity",
+      description: "Create rooms with up to 50 users instead of 4",
+      capacity: req.user?.subscription?.isPro ? "50 users" : "4 users"
+    },
+    prioritySupport: {
+      name: "Priority Support",
+      description: "Get priority customer support and faster response times",
+      available: req.user?.subscription?.isPro || false
+    },
+    advancedCollaboration: {
+      name: "Advanced Collaboration",
+      description: "Enhanced real-time collaboration features and tools",
+      available: req.user?.subscription?.isPro || false
+    },
+    higherAiLimits: {
+      name: "Higher AI Usage Limits",
+      description: "Get 1000 AI requests per day instead of 10",
+      limit: req.user?.subscription?.isPro ? "1000 requests/day" : "10 requests/day"
+    }
+  };
+
+  const freeFeatures = {
+    basicCollaboration: {
+      name: "Basic Collaboration",
+      description: "Real-time code editing with up to 4 users",
+      included: true
+    },
+    codeExecution: {
+      name: "Code Execution",
+      description: "Run code in multiple programming languages",
+      included: true
+    },
+    roomCreation: {
+      name: "Room Creation", 
+      description: "Create and manage coding rooms",
+      included: true
+    },
+    aiChatAssistant: {
+      name: "AI Chat Assistant",
+      description: "Get intelligent coding help with AI-powered conversations (10 requests/day)",
+      included: true,
+      limit: "10 requests/day"
+    },
+    aiCodeAnalysis: {
+      name: "AI Code Analysis", 
+      description: "Analyze your code for bugs, optimizations, and explanations (10 requests/day)",
+      included: true,
+      limit: "10 requests/day"
+    }
+  };
+
+  res.json({
+    success: true,
+    user: {
+      isPro: req.user?.subscription?.isPro || false,
+      email: req.user?.email,
+      planType: req.user?.subscription?.planType || 'free'
+    },
+    features: {
+      free: freeFeatures,
+      pro: proFeatures
+    },
+    pricing: {
+      free: {
+        price: "₹0/month",
+        features: Object.keys(freeFeatures)
+      },
+      pro: {
+        price: "₹99/month", 
+        features: Object.keys(proFeatures),
+        additionalBenefits: ["Higher AI usage limits (1000/day)", "Unlimited room capacity", "Priority support"]
+      }
+    }
+  });
+});
+
+// Manual Pro upgrade endpoint (for admin testing)
+app.post("/api/admin/upgrade-user", async (req, res) => {
+  // Check if user is authenticated
+  if (!req.user) {
+    return res.status(401).json({ 
+      success: false, 
+      message: "User not authenticated" 
+    });
+  }
+
+  // For security, only allow in development mode or for specific admin users
+  if (process.env.NODE_ENV === 'production') {
+    // In production, only allow specific admin emails
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',');
+    if (!adminEmails.includes(req.user.email)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin privileges required."
+      });
+    }
+  }
+
+  try {
+    const { targetUserEmail } = req.body;
+    
+    // If no target email provided, upgrade the current user
+    const userEmail = targetUserEmail || req.user.email;
+    
+    console.log(`Admin ${req.user.email} upgrading user ${userEmail} to Pro`);
+    
+    const success = await upgradeUserToPro(userEmail, {
+      paymentId: 'ADMIN_UPGRADE_' + Date.now(),
+      orderId: 'ADMIN_ORDER_' + Date.now(),
+      amount: 0,
+      currency: 'INR',
+      status: 'captured'
+    });
+
+    if (success) {
+      res.json({
+        success: true,
+        message: `User ${userEmail} has been successfully upgraded to Pro`,
+        upgradeType: 'admin_manual'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Failed to upgrade user to Pro"
+      });
+    }
+
+  } catch (error) {
+    console.error("Admin upgrade error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to upgrade user: " + error.message 
+    });
+  }
+});
+
+// Check subscription status
+app.get("/api/subscription/status", async (req, res) => {
+  try {
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "User not authenticated" 
+      });
+    }
+
+    // Get fresh user data from database
+    const user = await safeDBOperation(async () => {
+      return await collection.findOne({
+        $or: [
+          { email: req.user.email },
+          { googleId: req.user.googleId },
+          { _id: req.user._id }
+        ]
+      });
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    const subscription = user.subscription || { isPro: false, planType: 'free' };
+    
+    // Check if subscription has expired
+    if (subscription.isPro && subscription.subscriptionEnd && new Date() > new Date(subscription.subscriptionEnd)) {
+      // Subscription expired, downgrade to free
+      await safeDBOperation(async () => {
+        return await collection.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              'subscription.isPro': false,
+              'subscription.planType': 'free',
+              'subscription.features.aiChatEnabled': false,
+              'subscription.features.aiCodeAnalysisEnabled': false,
+              'subscription.features.unlimitedRooms': false,
+              'subscription.features.prioritySupport': false,
+              'subscription.features.advancedCollaboration': false,
+              'subscription.limits.maxRoomCapacity': 4
+            }
+          }
+        );
+      });
+      subscription.isPro = false;
+      subscription.planType = 'free';
+    }
+
+    // Return comprehensive subscription status
+    res.json({
+      success: true,
+      subscription: {
+        isPro: subscription.isPro || false,
+        planType: subscription.planType || 'free',
+        subscriptionStart: subscription.subscriptionStart,
+        subscriptionEnd: subscription.subscriptionEnd,
+        daysRemaining: subscription.subscriptionEnd ? 
+          Math.max(0, Math.ceil((new Date(subscription.subscriptionEnd) - new Date()) / (1000 * 60 * 60 * 24))) : 0,
+        features: {
+          aiChatEnabled: subscription.features?.aiChatEnabled || false,
+          aiCodeAnalysisEnabled: subscription.features?.aiCodeAnalysisEnabled || false,
+          unlimitedRooms: subscription.features?.unlimitedRooms || false,
+          prioritySupport: subscription.features?.prioritySupport || false,
+          advancedCollaboration: subscription.features?.advancedCollaboration || false
+        },
+        limits: {
+          maxRoomCapacity: subscription.limits?.maxRoomCapacity || 4,
+          aiRequestsPerDay: subscription.limits?.aiRequestsPerDay || 10,
+          dailyAiUsage: subscription.limits?.dailyAiUsage || { date: new Date(), count: 0 }
+        }
+      },
+      user: {
+        email: user.email,
+        fullname: user.fullname,
+        authType: user.authType
+      }
+    });
+
+  } catch (error) {
+    console.error("Subscription status error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to get subscription status: " + error.message 
+    });
+  }
+});
+
 // Room status API endpoint
 app.get("/api/rooms/status", async (req, res) => {
   // Check if user is authenticated
@@ -1750,6 +2621,309 @@ app.get("/api/auth-status", (req, res) => {
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// Middleware to check pro subscription
+async function requireProSubscription(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ 
+      error: "Unauthorized",
+      requiresPro: true,
+      message: "Please sign in to access this feature" 
+    });
+  }
+
+  try {
+    // Get fresh user data from database to check subscription
+    const user = await safeDBOperation(async () => {
+      return await collection.findOne({
+        $or: [
+          { email: req.user.email },
+          { googleId: req.user.googleId },
+          { _id: req.user._id }
+        ]
+      });
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        error: "User not found",
+        requiresPro: true 
+      });
+    }
+
+    const subscription = user.subscription || { isPro: false };
+    
+    // Check if subscription has expired
+    if (subscription.isPro && subscription.subscriptionEnd && new Date() > new Date(subscription.subscriptionEnd)) {
+      // Subscription expired, downgrade to free
+      await safeDBOperation(async () => {
+        return await collection.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              'subscription.isPro': false,
+              'subscription.planType': 'free',
+              'subscription.features.aiChatEnabled': false,
+              'subscription.features.aiCodeAnalysisEnabled': false,
+              'subscription.features.unlimitedRooms': false,
+              'subscription.features.prioritySupport': false,
+              'subscription.features.advancedCollaboration': false,
+              'subscription.limits.maxRoomCapacity': 4
+            }
+          }
+        );
+      });
+      subscription.isPro = false;
+    }
+
+    if (!subscription.isPro) {
+      return res.status(403).json({ 
+        error: "This feature requires CodeCollab Pro subscription",
+        requiresPro: true,
+        message: "Upgrade to Pro to access AI-powered code analysis, debugging, and optimization features",
+        upgradeUrl: "/payment",
+        features: {
+          available: ['Basic collaboration', 'Limited rooms (4 users)', 'Basic code execution', 'AI Chat Assistant (10/day)', 'AI Code Analysis (10/day)'],
+          proFeatures: ['Unlimited room capacity (50 users)', 'Higher AI limits (1000/day)', 'Priority support', 'Advanced collaboration']
+        }
+      });
+    }
+
+    // Update req.user with fresh subscription data
+    req.user.subscription = subscription;
+    next();
+  } catch (error) {
+    console.error("Pro subscription check error:", error);
+    return res.status(500).json({ 
+      error: "Failed to verify subscription status",
+      requiresPro: true 
+    });
+  }
+}
+
+// Middleware to check specific Pro feature access
+function requireProFeature(featureName) {
+  return async (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ 
+        error: "Unauthorized",
+        requiresPro: true,
+        message: "Please sign in to access this feature" 
+      });
+    }
+
+    try {
+      // Get fresh user data from database
+      const user = await safeDBOperation(async () => {
+        return await collection.findOne({
+          $or: [
+            { email: req.user.email },
+            { googleId: req.user.googleId },
+            { _id: req.user._id }
+          ]
+        });
+      });
+
+      if (!user) {
+        return res.status(404).json({ 
+          error: "User not found",
+          requiresPro: true 
+        });
+      }
+
+      const subscription = user.subscription || { isPro: false };
+      
+      // Check if subscription has expired
+      if (subscription.isPro && subscription.subscriptionEnd && new Date() > new Date(subscription.subscriptionEnd)) {
+        subscription.isPro = false;
+      }
+
+      // Check if user has Pro subscription and specific feature enabled
+      const hasFeature = subscription.isPro && 
+                        subscription.features && 
+                        subscription.features[featureName];
+
+      if (!hasFeature) {
+        const featureDisplayNames = {
+          aiChatEnabled: 'AI Chat Assistant',
+          aiCodeAnalysisEnabled: 'AI Code Analysis',
+          unlimitedRooms: 'Unlimited Room Capacity',
+          prioritySupport: 'Priority Support',
+          advancedCollaboration: 'Advanced Collaboration Features'
+        };
+
+        return res.status(403).json({ 
+          error: `This feature requires CodeCollab Pro: ${featureDisplayNames[featureName] || featureName}`,
+          requiresPro: true,
+          featureRequired: featureName,
+          featureDisplayName: featureDisplayNames[featureName] || featureName,
+          message: `Upgrade to Pro to access ${featureDisplayNames[featureName] || featureName}`,
+          upgradeUrl: "/payment"
+        });
+      }
+
+      // Update req.user with fresh subscription data
+      req.user.subscription = subscription;
+      next();
+    } catch (error) {
+      console.error(`Pro feature check error for ${featureName}:`, error);
+      return res.status(500).json({ 
+        error: "Failed to verify feature access",
+        requiresPro: true 
+      });
+    }
+  };
+}
+
+// Helper function to update user subscription to Pro
+async function upgradeUserToPro(userId, paymentDetails = {}) {
+  try {
+    const subscriptionEnd = new Date();
+    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1); // Add 1 month
+
+    const updateResult = await safeDBOperation(async () => {
+      return await collection.updateOne(
+        { 
+          $or: [
+            { email: userId },
+            { googleId: userId },
+            { _id: userId }
+          ]
+        },
+        {
+          $set: {
+            'subscription.isPro': true,
+            'subscription.planType': 'pro',
+            'subscription.subscriptionStart': new Date(),
+            'subscription.subscriptionEnd': subscriptionEnd,
+            'subscription.autoRenew': true,
+            'subscription.paymentId': paymentDetails.paymentId || null,
+            // Enable all Pro features
+            'subscription.features.aiChatEnabled': true,
+            'subscription.features.aiCodeAnalysisEnabled': true,
+            'subscription.features.unlimitedRooms': true,
+            'subscription.features.prioritySupport': true,
+            'subscription.features.advancedCollaboration': true,
+            // Update limits
+            'subscription.limits.maxRoomCapacity': 50,
+            'subscription.limits.aiRequestsPerDay': 1000
+          },
+          $push: paymentDetails.paymentId ? {
+            'subscription.paymentHistory': {
+              paymentId: paymentDetails.paymentId,
+              orderId: paymentDetails.orderId,
+              amount: paymentDetails.amount,
+              currency: paymentDetails.currency,
+              status: paymentDetails.status,
+              createdAt: new Date()
+            }
+          } : {}
+        }
+      );
+    });
+
+    return updateResult.modifiedCount > 0;
+  } catch (error) {
+    console.error("Error upgrading user to Pro:", error);
+    return false;
+  }
+}
+
+// Helper function to check daily AI usage limit
+async function checkAiUsageLimit(userId) {
+  try {
+    const user = await safeDBOperation(async () => {
+      // Check if userId looks like an ObjectId (24 char hex string)
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(userId);
+      
+      if (isObjectId) {
+        return await collection.findOne({ _id: userId });
+      } else {
+        return await collection.findOne({
+          $or: [
+            { email: userId },
+            { googleId: userId }
+          ]
+        });
+      }
+    });
+
+    if (!user) return { allowed: false, reason: 'User not found' };
+
+    const subscription = user.subscription || { isPro: false };
+    const today = new Date().toDateString();
+    
+    // Pro users have higher limits
+    const dailyLimit = subscription.isPro ? 1000 : 10;
+    
+    // Check if daily usage tracking exists and is for today
+    if (!subscription.limits || 
+        !subscription.limits.dailyAiUsage || 
+        new Date(subscription.limits.dailyAiUsage.date).toDateString() !== today) {
+      // Reset daily usage for new day
+      await safeDBOperation(async () => {
+        return await collection.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              'subscription.limits.dailyAiUsage.date': new Date(),
+              'subscription.limits.dailyAiUsage.count': 0
+            }
+          }
+        );
+      });
+      return { allowed: true, remaining: dailyLimit };
+    }
+
+    const currentUsage = subscription.limits.dailyAiUsage.count || 0;
+    
+    if (currentUsage >= dailyLimit) {
+      return { 
+        allowed: false, 
+        reason: subscription.isPro ? 'Daily Pro limit reached' : 'Daily limit reached. Upgrade to Pro for higher limits.',
+        requiresPro: !subscription.isPro
+      };
+    }
+
+    return { 
+      allowed: true, 
+      remaining: dailyLimit - currentUsage,
+      isPro: subscription.isPro
+    };
+  } catch (error) {
+    console.error("Error checking AI usage limit:", error);
+    return { allowed: false, reason: 'Error checking usage limit' };
+  }
+}
+
+// Helper function to increment AI usage
+async function incrementAiUsage(userId) {
+  try {
+    const today = new Date();
+    await safeDBOperation(async () => {
+      return await collection.updateOne(
+        {
+          $or: [
+            { email: userId },
+            { googleId: userId },
+            { _id: userId }
+          ]
+        },
+        {
+          $inc: {
+            'subscription.limits.dailyAiUsage.count': 1,
+            'activity.aiRequestsTotal': 1
+          },
+          $set: {
+            'subscription.limits.dailyAiUsage.date': today
+          }
+        }
+      );
+    });
+  } catch (error) {
+    console.error("Error incrementing AI usage:", error);
+  }
+}
+
 // Available AI models
 const AI_MODELS = {
   'gemini-2.0-flash-exp': 'Gemini 2.0 Flash (Experimental)',
@@ -1758,18 +2932,35 @@ const AI_MODELS = {
   'gemini-1.0-pro': 'Gemini 1.0 Pro'
 };
 
-// AI Chat endpoint
+// AI Chat endpoint - Available for all users
 app.post("/api/ai-chat", async (req, res) => {
-  if (!req.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
   try {
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ 
+        error: "Unauthorized",
+        message: "Please sign in to access this feature" 
+      });
+    }
+
+    // Check AI usage limit (different limits for Pro vs Free users)
+    const usageCheck = await checkAiUsageLimit(req.user.email || req.user.googleId || req.user._id);
+    if (!usageCheck.allowed) {
+      return res.status(429).json({
+        error: usageCheck.reason,
+        requiresPro: usageCheck.requiresPro || false,
+        upgradeUrl: "/payment"
+      });
+    }
+
     const { message, context, model = 'gemini-2.0-flash-exp', conversationHistory = [] } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: "Message is required" });
     }
+
+    const userPlan = req.user.subscription?.isPro ? 'Pro' : 'Free';
+    console.log(`AI Chat request from ${req.user.email} (${userPlan} user) - Remaining: ${usageCheck.remaining}`);
 
     // Initialize the AI model
     const aiModel = genAI.getGenerativeModel({ model: model });
@@ -1784,8 +2975,9 @@ app.post("/api/ai-chat", async (req, res) => {
 5. Code reviews and optimization suggestions
 
 Current context:
-- User: ${req.user.username || req.user.email}
+- User: ${req.user.fullname || req.user.email} (CodeCollab ${userPlan})
 - Platform: CodeCollab Real-time Coding Environment
+- User Plan: ${userPlan} ${userPlan === 'Pro' ? '(Advanced AI features enabled)' : '(Standard AI features)'}
 
 Please provide helpful, accurate, and concise responses. Format code using markdown code blocks with appropriate language tags.`;
 
@@ -1806,9 +2998,13 @@ Please provide helpful, accurate, and concise responses. Format code using markd
       parts: [{ text: systemPrompt }]
     });
     
+    const welcomeMessage = userPlan === 'Pro' 
+      ? "I'm your AI coding assistant! As a Pro user, you have access to advanced AI features with higher usage limits. I'm ready to help you with coding questions, debugging, code reviews, and programming guidance. What would you like help with?"
+      : "I'm your AI coding assistant! I'm ready to help you with coding questions, debugging, code reviews, and programming guidance. What would you like help with?";
+    
     chatHistory.push({
       role: "model", 
-      parts: [{ text: "I'm your AI coding assistant! I'm ready to help you with coding questions, debugging, code reviews, and programming guidance. What would you like help with?" }]
+      parts: [{ text: welcomeMessage }]
     });
 
     // Add conversation history
@@ -1841,10 +3037,18 @@ Please provide helpful, accurate, and concise responses. Format code using markd
     const response = await result.response;
     const aiResponse = response.text();
 
+    // Increment usage count
+    await incrementAiUsage(req.user.email || req.user.googleId || req.user._id);
+
     res.json({
       response: aiResponse,
       model: model,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      usage: {
+        remaining: Math.max(0, usageCheck.remaining - 1),
+        isPro: usageCheck.isPro,
+        plan: userPlan
+      }
     });
 
   } catch (error) {
@@ -1868,18 +3072,34 @@ app.get("/api/ai-models", (req, res) => {
   });
 });
 
-// AI Code Analysis endpoint
+// AI Code Analysis endpoint - Available for all users
 app.post("/api/ai-analyze", async (req, res) => {
-  if (!req.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
   try {
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ 
+        error: "Unauthorized",
+        message: "Please sign in to access this feature" 
+      });
+    }
+
+    // Check AI usage limit
+    const usageCheck = await checkAiUsageLimit(req.user.email || req.user.googleId || req.user._id);
+    if (!usageCheck.allowed) {
+      return res.status(429).json({
+        error: usageCheck.reason,
+        requiresPro: usageCheck.requiresPro || false,
+        upgradeUrl: "/payment"
+      });
+    }
+
     const { code, language, analysisType = 'general' } = req.body;
 
     if (!code) {
       return res.status(400).json({ error: "Code is required" });
     }
+
+    console.log(`AI Code Analysis request from ${req.user.email} (Pro user) - Type: ${analysisType}`);
 
     const aiModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
@@ -1887,27 +3107,40 @@ app.post("/api/ai-analyze", async (req, res) => {
     
     switch (analysisType) {
       case 'debug':
-        prompt = `Please analyze this ${language} code for potential bugs, errors, or issues:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nProvide specific suggestions for fixes and improvements.`;
+        prompt = `As an expert code analyzer for CodeCollab Pro, please analyze this ${language} code for potential bugs, errors, or issues:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nProvide specific suggestions for fixes and improvements. Include severity levels (Critical, High, Medium, Low) for each issue found.`;
         break;
       case 'optimize':
-        prompt = `Please analyze this ${language} code for performance optimizations and best practices:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nSuggest specific improvements for better performance, readability, and maintainability.`;
+        prompt = `As an expert performance analyst for CodeCollab Pro, please analyze this ${language} code for performance optimizations and best practices:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nSuggest specific improvements for better performance, readability, and maintainability. Include before/after code examples where applicable.`;
         break;
       case 'explain':
-        prompt = `Please explain what this ${language} code does, line by line:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nProvide a clear explanation of the code's functionality and logic.`;
+        prompt = `As an expert code educator for CodeCollab Pro, please explain what this ${language} code does, line by line:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nProvide a clear explanation of the code's functionality, logic, and any design patterns used. Include complexity analysis if relevant.`;
+        break;
+      case 'security':
+        prompt = `As an expert security analyst for CodeCollab Pro, please analyze this ${language} code for security vulnerabilities:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nIdentify potential security issues, provide severity ratings, and suggest secure coding practices.`;
+        break;
+      case 'refactor':
+        prompt = `As an expert code architect for CodeCollab Pro, please suggest refactoring improvements for this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nProvide suggestions for better code structure, design patterns, and maintainability. Include refactored code examples.`;
         break;
       default:
-        prompt = `Please provide a general analysis of this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nInclude observations about code quality, potential issues, and suggestions for improvement.`;
+        prompt = `As an expert code reviewer for CodeCollab Pro, please provide a comprehensive analysis of this ${language} code:\n\n\`\`\`${language}\n${code}\n\`\`\`\n\nInclude observations about code quality, potential issues, security considerations, performance implications, and suggestions for improvement.`;
     }
 
     const result = await aiModel.generateContent(prompt);
     const response = await result.response;
     const analysis = response.text();
 
+    // Increment usage count
+    await incrementAiUsage(req.user.email || req.user.googleId || req.user._id);
+
     res.json({
       analysis: analysis,
       analysisType: analysisType,
       language: language,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      usage: {
+        remaining: Math.max(0, usageCheck.remaining - 1),
+        isPro: usageCheck.isPro
+      }
     });
 
   } catch (error) {
@@ -1919,116 +3152,8 @@ app.post("/api/ai-analyze", async (req, res) => {
   }
 });
 
-// AI Chat endpoint
-app.post("/api/ai-chat", async (req, res) => {
-  // Check if user is authenticated
-  if (!req.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  try {
-    const { message, model, roomId } = req.body;
-
-    if (!message) {
-      return res.status(400).json({ error: "Message is required" });
-    }
-
-    console.log(`AI Chat request from ${req.user.email} in room ${roomId} using model ${model}`);
-
-    // For now, we'll use Gemini 2.0 Flash as the primary model
-    // You can extend this to handle multiple models
-    const apiKey = process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error("Gemini API key not configured");
-    }
-
-    // Call Gemini API
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `You are a helpful AI coding assistant integrated into a collaborative code editor called CodeCollab. You help developers with code reviews, debugging, explanations, and best practices. Keep your responses concise but helpful, and use markdown formatting when appropriate.
-
-User question: ${message}`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      })
-    });
-
-    if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.text();
-      console.error('Gemini API error:', errorData);
-      throw new Error(`Gemini API error: ${geminiResponse.status}`);
-    }
-
-    const geminiData = await geminiResponse.json();
-    
-    if (geminiData.candidates && geminiData.candidates[0] && geminiData.candidates[0].content) {
-      const aiResponse = geminiData.candidates[0].content.parts[0].text;
-      
-      // Format the response with basic markdown to HTML conversion
-      const formattedResponse = aiResponse
-        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br>');
-
-      res.json({
-        response: formattedResponse,
-        model: model,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      console.error('Unexpected Gemini response structure:', geminiData);
-      throw new Error('Invalid response from AI service');
-    }
-
-  } catch (error) {
-    console.error("AI Chat error:", error);
-    res.status(500).json({
-      error: "Failed to get AI response",
-      message: error.message,
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-// AI Autocomplete endpoint
-app.post("/api/ai-autocomplete", async (req, res) => {
-  // Check if user is authenticated
-  if (!req.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
+// Vercel debug page route
+app.post("/api/ai-autocomplete", requireProSubscription, async (req, res) => {
 
   try {
     const { language, context, currentLine, cursorPosition, textBeforeCursor, fullCode, isShortInput, wordCount } = req.body;
@@ -2345,7 +3470,7 @@ io.on("connection", (socket) => {
   };
 
   // Handle joining a room
-  socket.on("join_room", (roomData) => {
+  socket.on("join_room", async (roomData) => {
     const { roomId, userId, username, picture, language } = roomData;
 
     console.log(
@@ -2377,6 +3502,54 @@ io.on("connection", (socket) => {
       }
     }
 
+    // Check room capacity based on user subscription (only for new users)
+    if (!userAlreadyInRoom) {
+      try {
+        // Get user data from database to check subscription
+        const user = await safeDBOperation(async () => {
+          return await collection.findOne({
+            $or: [
+              { email: userId.includes('@') ? userId : undefined },
+              { googleId: userId },
+              { _id: userId }
+            ]
+          });
+        });
+
+        const subscription = user?.subscription || { isPro: false };
+        
+        // Check if subscription has expired
+        if (subscription.isPro && subscription.subscriptionEnd && new Date() > new Date(subscription.subscriptionEnd)) {
+          subscription.isPro = false;
+        }
+
+        const maxCapacity = subscription.isPro ? 50 : 4; // Pro users get 50, free users get 4
+        const currentUserCount = roomUsers.size;
+
+        if (currentUserCount >= maxCapacity) {
+          console.log(`Room ${roomId} is at capacity (${currentUserCount}/${maxCapacity})`);
+          socket.emit("join_error", { 
+            message: subscription.isPro ? 
+              `Room is at maximum capacity (${maxCapacity} users)` :
+              `Room is at free plan capacity (${maxCapacity} users). Upgrade to Pro for unlimited capacity.`,
+            requiresPro: !subscription.isPro,
+            upgradeUrl: "/payment"
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking user subscription for room capacity:", error);
+        // Default to free limits on error
+        if (roomUsers.size >= 4) {
+          socket.emit("join_error", { 
+            message: "Room is at capacity. Please try again later.",
+            requiresPro: true
+          });
+          return;
+        }
+      }
+    }
+
     // Assign a color to the user if they don't have one
     const userColor = getColorForUser(userId);
 
@@ -2392,6 +3565,44 @@ io.on("connection", (socket) => {
 
     // Join the Socket.IO room
     socket.join(roomId);
+
+    // Track room join in user activity
+    if (!userAlreadyInRoom) {
+      try {
+        await safeDBOperation(async () => {
+          await collection.updateOne(
+            { 
+              $or: [
+                { email: userId.includes('@') ? userId : undefined },
+                { googleId: userId },
+                { _id: userId }
+              ]
+            },
+            { 
+              $inc: {
+                "activity.roomsJoined": 1
+              }
+            }
+          );
+        });
+
+        // Track activity
+        const roomData = await safeDBOperation(async () => {
+          return await Room.findOne({ roomId: roomId });
+        });
+        
+        await trackUserActivity(
+          userId, 
+          'room_joined', 
+          `Joined room: ${roomData?.name || roomId}`,
+          `Collaboration session started`,
+          { roomId, roomName: roomData?.name || roomId }
+        );
+
+      } catch (error) {
+        console.error("Error tracking room join:", error);
+      }
+    }
 
     // Send current cursor positions to the new user
     const cursors = [];
@@ -2428,13 +3639,25 @@ io.on("connection", (socket) => {
   });
 
   // Handle code changes
-  socket.on("code_change", (data) => {
+  socket.on("code_change", async (data) => {
     const { roomId, code, language, userId, username, cursorPosition } = data;
 
     // Validate data
     if (!roomId || !userId || typeof code !== "string") {
       console.log(`Invalid code data from ${username || userId}`);
       return;
+    }
+
+    // Auto-save code to database
+    try {
+      await saveRoomCode(roomId, {
+        code: code,
+        language: language || 'javascript',
+        lastModified: new Date(),
+        lastModifiedBy: userId
+      });
+    } catch (error) {
+      console.error("Error auto-saving code for room", roomId, ":", error);
     }
 
     // Broadcast code change to all other users in the room
@@ -2588,7 +3811,7 @@ io.on("connection", (socket) => {
   });
 
   // Handle code execution requests
-  socket.on("run_code", (data) => {
+  socket.on("run_code", async (data) => {
     const { roomId, code, language, userId, username, fileName } = data;
 
     if (!roomId || !code || !language) {
@@ -2599,9 +3822,36 @@ io.on("connection", (socket) => {
       `Running ${language} code for user ${username} in room ${roomId}`,
     );
 
+    // Get room name for better tracking
+    let roomName = roomId;
+    try {
+      const roomData = await safeDBOperation(async () => {
+        return await Room.findOne({ roomId: roomId });
+      });
+      roomName = roomData?.name || roomId;
+    } catch (error) {
+      console.error("Error getting room name:", error);
+    }
+
     // Execute code asynchronously
     executeCode(code, language, fileName)
-      .then((result) => {
+      .then(async (result) => {
+        // Track code execution with real data
+        if (userId) {
+          try {
+            await trackCodeExecution(
+              userId, 
+              code, 
+              language, 
+              roomId, 
+              roomName, 
+              result.executionTime || 0
+            );
+          } catch (error) {
+            console.error("Error tracking code execution:", error);
+          }
+        }
+
         // Send result back to the room
         io.to(roomId).emit("code_result", {
           result: result.output,
@@ -2614,7 +3864,23 @@ io.on("connection", (socket) => {
           executionTime: result.executionTime
         });
       })
-      .catch((error) => {
+      .catch(async (error) => {
+        // Still track failed execution
+        if (userId) {
+          try {
+            await trackCodeExecution(
+              userId, 
+              code, 
+              language, 
+              roomId, 
+              roomName, 
+              0
+            );
+          } catch (trackError) {
+            console.error("Error tracking failed code execution:", trackError);
+          }
+        }
+
         // Send error back to the room
         io.to(roomId).emit("code_result", {
           result: null,
@@ -2691,11 +3957,74 @@ io.on("connection", (socket) => {
   });
 
   // Handle file save events
-  socket.on("file_saved", (data) => {
-    const { roomId, userId, username, fileName, fileIndex } = data;
+  socket.on("file_saved", async (data) => {
+    const { roomId, userId, username, fileName, fileIndex, fileContent, fileLanguage } = data;
 
     if (!roomId || !userId || !fileName) {
       return;
+    }
+
+    // Save file content to database
+    if (fileContent) {
+      try {
+        await safeDBOperation(async () => {
+          let room = await Room.findOne({ roomId: roomId });
+          
+          if (!room) {
+            // Create room if it doesn't exist
+            room = new Room({
+              roomId: roomId,
+              name: `Room ${roomId}`,
+              currentCode: '',
+              files: []
+            });
+          }
+
+          // Update or add file
+          const existingFileIndex = room.files.findIndex(f => f.name === fileName);
+          
+          if (existingFileIndex !== -1) {
+            // Update existing file
+            room.files[existingFileIndex] = {
+              name: fileName,
+              content: fileContent,
+              language: fileLanguage || 'javascript',
+              lastModified: new Date()
+            };
+          } else {
+            // Add new file
+            room.files.push({
+              name: fileName,
+              content: fileContent,
+              language: fileLanguage || 'javascript',
+              lastModified: new Date()
+            });
+          }
+
+          room.lastModified = new Date();
+          await room.save();
+        });
+      } catch (error) {
+        console.error("Error saving file to database:", error);
+      }
+    }
+
+    // Track file save activity
+    if (userId && userId.includes('@')) {
+      try {
+        await trackUserActivity(
+          userId, 
+          'file_saved', 
+          `Saved file: ${fileName}`,
+          `File saved in room`,
+          { roomId, fileName }
+        );
+        
+        // Update coding session
+        await updateCodingSession(userId);
+      } catch (error) {
+        console.error("Error tracking file save activity:", error);
+      }
     }
 
     // Broadcast file save event to other users
@@ -2727,7 +4056,7 @@ io.on("connection", (socket) => {
   });
 
   // Handle disconnection
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("User disconnected:", socket.id);
 
     // Find which room the user was in
@@ -2751,6 +4080,15 @@ io.on("connection", (socket) => {
         }
 
         if (!hasOtherSockets) {
+          // End coding session for this user
+          if (userId && userId.includes('@')) {
+            try {
+              await endCodingSession(userId);
+            } catch (error) {
+              console.error("Error ending coding session on disconnect:", error);
+            }
+          }
+
           // If the room is empty, remove it
           if (users.size === 0) {
             activeRooms.delete(roomId);

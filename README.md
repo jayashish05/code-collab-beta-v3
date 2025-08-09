@@ -6,6 +6,7 @@ CodeCollab is an interactive, real-time collaborative coding platform that enabl
 
 ## Features
 
+### Free Features
 - **Real-time Collaboration**: Code together with teammates in real-time
 - **Multiple Language Support**: JavaScript, Python, Java, C#, C++, PHP, Ruby, Go, Swift
 - **Live Chat**: Communicate with team members while coding
@@ -13,14 +14,27 @@ CodeCollab is an interactive, real-time collaborative coding platform that enabl
 - **User Authentication**: Google OAuth and local authentication
 - **Syntax Highlighting**: Clear code visualization with theme options
 - **Responsive Design**: Works on desktop and mobile devices
+- **Room Capacity**: Up to 4 members per room
+
+### Pro Features (₹99/month)
+- **🤖 AI Code Assistant**: Advanced AI-powered code analysis, debugging, and optimization
+- **🎤 Voice Chat**: Real-time voice communication with team members
+- **👥 Unlimited Room Capacity**: Host rooms with unlimited members
+- **🛠️ Code Debugging**: AI-powered bug detection and fixing suggestions
+- **📊 Code Optimization**: Performance analysis and improvement recommendations
+- **💬 Code Explanation**: AI explains complex code snippets in simple terms
+- **⚡ Priority Support**: Get faster help and exclusive updates
 
 ## Tech Stack
 
 - **Frontend**: HTML5, CSS3, JavaScript, Bootstrap 5
 - **Backend**: Node.js, Express.js
+- **Database**: MongoDB with Mongoose
 - **Real-time Communication**: Socket.IO
 - **Code Editor**: CodeMirror
-- **Authentication**: Passport.js
+- **Authentication**: Passport.js (Google OAuth, Local)
+- **Payment Processing**: Razorpay
+- **AI Integration**: Google Gemini AI
 
 ## Getting Started
 
@@ -28,6 +42,10 @@ CodeCollab is an interactive, real-time collaborative coding platform that enabl
 
 - Node.js (v14 or higher)
 - npm or yarn
+- MongoDB database
+- Razorpay account (for payment processing)
+- Google API credentials (for OAuth)
+- Google Gemini AI API key (for Pro features)
 
 ### Installation
 
@@ -44,11 +62,27 @@ CodeCollab is an interactive, real-time collaborative coding platform that enabl
 
 3. Create a `.env` file in the root directory with the following variables:
    ```
-   PORT=3000
-   SESSION_SECRET=your_session_secret
-   GOOGLE_CLIENT_ID=your_google_client_id
-   GOOGLE_CLIENT_SECRET=your_google_client_secret
-   CALLBACK_URL=http://localhost:3000/auth/google/callback
+   # Database Configuration
+   MONGODB_URI=mongodb://localhost:27017/codecollab
+
+   # Session Configuration
+   SESSION_SECRET=your_session_secret_here
+
+   # Google OAuth Configuration
+   CLIENT_ID=your_google_client_id
+   CLIENT_GOOGLE_SECRET=your_google_client_secret
+   GOOGLE_CALLBACK_URL=http://localhost:3002/auth/google/callback
+
+   # AI Configuration (for Pro features)
+   GEMINI_API_KEY=your_gemini_api_key
+
+   # Payment Configuration (Razorpay)
+   RAZORPAY_KEY_ID=your_razorpay_key_id
+   RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+
+   # Environment
+   NODE_ENV=development
+   PORT=3002
    ```
 
 4. Start the development server:

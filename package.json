@@ -17,25 +17,29 @@
     "passport-google-oauth2": "^0.2.0",
     "passport-local": "^1.0.0",
     "random-int": "^3.0.0",
+    "razorpay": "^2.9.4",
     "socket.io": "^4.8.1",
     "uuid": "^11.1.0"
   },
   "name": "codecollab",
   "version": "1.0.0",
-  "description": "Real-time collaborative coding platform",
+  "description": "Real-time collaborative coding platform with Pro features",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
     "dev": "node index.js",
-    "build": "echo \"No build step required\""
+    "build": "echo \"No build step required - Ready for deployment\""
   },
   "keywords": [
     "collaboration",
     "coding",
     "real-time",
     "socket.io",
-    "node"
+    "node",
+    "payment",
+    "ai",
+    "razorpay"
   ],
   "author": "Jayashish Muppur",
   "license": "ISC",

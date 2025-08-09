@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Profile | CodeCollab</title>
+  <%- include('head-scripts') %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      background-color: #0f172a;
+      color: white;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .profile-container {
+      min-height: 100vh;
+      padding: 2rem 0;
+    }
+
+    /* Navbar styles */
+    .top-navbar {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.5rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      height: 60px;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: white;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .navbar-brand:hover {
+      color: white !important;
+      text-decoration: none;
+    }
+
+    .navbar-nav .nav-link {
+      color: rgba(255, 255, 255, 0.8);
+      transition: color 0.3s;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+    }
+
+    .navbar-nav .nav-link:hover {
+      color: white;
+    }
+
+    .navbar-profile {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .navbar-profile:hover {
+      transform: scale(1.1);
+    }
+
+    .navbar-profile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    /* Remove dropdown arrow from profile */
+    .dropdown-toggle::after {
+      display: none !important;
+    }
+
+    /* Profile Header */
+    .profile-header {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .profile-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+      transform: rotate(45deg);
+      animation: shimmer 6s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+
+    .profile-avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 700;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s;
+    }
+
+    .profile-avatar:hover {
+      transform: scale(1.05);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
+    .profile-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .profile-name {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .profile-email {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 1.5rem;
+    }
+
+    .profile-joined {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    /* Profile Stats */
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .stat-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #3b82f6;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Profile Content */
+    .profile-content {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .profile-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .profile-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .profile-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Profile Cards */
+    .profile-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.3s;
+    }
+
+    .profile-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+    }
+
+    .card-title i {
+      color: #3b82f6;
+    }
+
+    /* Recent Activity */
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3b82f6;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-title {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .activity-time {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Code Snippets */
+    .code-snippet-item {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .code-snippet-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .snippet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .snippet-language {
+      background: #3b82f6;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .snippet-time {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .snippet-info {
+      margin-bottom: 0.75rem;
+    }
+
+    .code-preview {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      padding: 0.75rem;
+      font-size: 0.85rem;
+      color: #e5e7eb;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .empty-state p {
+      margin-top: 1rem;
+      margin-bottom: 0;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .action-btn {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+      color: white;
+      text-decoration: none;
+    }
+
+    .action-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .action-btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1);
+    }
+
+    /* Settings Panel */
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-item:last-child {
+      border-bottom: none;
+    }
+
+    .settings-label {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 500;
+    }
+
+    .settings-label i {
+      color: #3b82f6;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .toggle-switch.active {
+      background: #3b82f6;
+    }
+
+    .toggle-switch::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.3s;
+    }
+
+    .toggle-switch.active::before {
+      transform: translateX(26px);
+    }
+
+    /* Back Button */
+    .back-button {
+      position: fixed;
+      top: 80px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-decoration: none;
+      transition: all 0.3s;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+
+    .back-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      text-decoration: none;
+      transform: scale(1.1);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .profile-container {
+        padding: 1rem;
+      }
+
+      .profile-header {
+        padding: 2rem 1rem;
+      }
+
+      .profile-name {
+        font-size: 2rem;
+      }
+
+      .profile-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .action-btn {
+        justify-content: center;
+      }
+
+      .back-button {
+        position: static;
+        margin-bottom: 1rem;
+        width: auto;
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+      }
+    }
+
+    /* Dark mode enhancements */
+    .profile-card {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .profile-card:hover {
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Animations */
+    .fade-in {
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .slide-up {
+      animation: slideUp 0.6s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg top-navbar">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/dashboard">
+        <i class="bi bi-code-slash"></i>
+        CodeCollab
+      </a>
+      
+      <div class="navbar-nav ms-auto">
+        <div class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="navbar-profile" data-initials="<%= user && user.fullname ? user.fullname.split(' ').map(n => n[0]).join('').toUpperCase() : 'U' %>">
+              <img src="<%= user && user.picture ? user.picture : 'https://randomuser.me/api/portraits/men/32.jpg' %>" 
+                   alt="Profile" 
+                   id="profileImage">
+            </div>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person-circle me-2"></i> <%= user && user.fullname ? user.fullname : 'User' %></a></li>
+            <li><a class="dropdown-item" href="#"><i class="bi bi-envelope me-2"></i> <%= user && user.email ? user.email : 'No email' %></a></li>
+            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Account Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/auth/signout"><i class="bi bi-box-arrow-right me-2"></i> Sign Out</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Back Button (Mobile) -->
+  <a href="/dashboard" class="back-button d-md-none">
+    <i class="bi bi-arrow-left"></i>
+    Back to Dashboard
+  </a>
+
+  <!-- Back Button (Desktop) -->
+  <a href="/dashboard" class="back-button d-none d-md-flex">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+
+  <div class="profile-container">
+    <div class="container">
+      <!-- Profile Header -->
+      <div class="profile-header fade-in">
+        <div class="profile-avatar" data-initials="<%= user && user.fullname ? user.fullname.split(' ').map(n => n[0]).join('').toUpperCase() : 'U' %>">
+          <img src="<%= user && user.picture ? user.picture : '' %>" alt="Profile" onerror="this.style.display='none'">
+        </div>
+        <h1 class="profile-name"><%= user && user.fullname ? user.fullname : 'Anonymous User' %></h1>
+        <p class="profile-email"><%= user && user.email ? user.email : 'No email provided' %></p>
+        <div class="profile-joined">
+          <i class="bi bi-calendar-check"></i>
+          Joined <%= user && user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Recently' %>
+        </div>
+      </div>
+
+      <!-- Profile Stats -->
+      <div class="profile-stats slide-up">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="bi bi-door-open"></i>
+          </div>
+          <div class="stat-number" id="rooms-created"><%= stats && stats.roomsCreated ? stats.roomsCreated : 0 %></div>
+          <div class="stat-label">Rooms Created</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="bi bi-people"></i>
+          </div>
+          <div class="stat-number" id="collaborations"><%= stats && stats.collaborations ? stats.collaborations : 0 %></div>
+          <div class="stat-label">Collaborations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="bi bi-clock-history"></i>
+          </div>
+          <div class="stat-number" id="coding-time">
+            <% if (stats && stats.totalCodingHours > 0) { %>
+              <%= stats.totalCodingHours %>h <%= stats.totalCodingMinutes || 0 %>m
+            <% } else { %>
+              0h 0m
+            <% } %>
+          </div>
+          <div class="stat-label">Time Coding</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="bi bi-code-slash"></i>
+          </div>
+          <div class="stat-number" id="lines-of-code"><%= stats && stats.linesOfCode ? stats.linesOfCode.toLocaleString() : 0 %></div>
+          <div class="stat-label">Lines of Code</div>
+        </div>
+      </div>
+
+      <!-- Refresh Stats Button -->
+      <div class="text-center mb-4">
+        <button class="btn btn-outline-primary" onclick="refreshStats()">
+          <i class="bi bi-arrow-clockwise"></i>
+          Refresh Statistics
+        </button>
+      </div>
+
+      <!-- Profile Content -->
+      <div class="profile-content slide-up">
+        <!-- Main Content -->
+        <div class="profile-main">
+          <!-- Recent Activity -->
+          <div class="profile-card">
+            <h3 class="card-title">
+              <i class="bi bi-activity"></i>
+              Recent Activity
+            </h3>
+            <div id="activityList">
+              <div class="activity-item">
+                <div class="activity-icon">
+                  <i class="bi bi-person-plus"></i>
+                </div>
+                <div class="activity-content">
+                  <div class="activity-title">Welcome to CodeCollab!</div>
+                  <div class="activity-time">Account created</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon">
+                  <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="activity-content">
+                  <div class="activity-title">Account verified</div>
+                  <div class="activity-time">Email verified successfully</div>
+                </div>
+              </div>
+              <% if (stats && stats.lastLogin) { %>
+              <div class="activity-item">
+                <div class="activity-icon">
+                  <i class="bi bi-person-check"></i>
+                </div>
+                <div class="activity-content">
+                  <div class="activity-title">Last login</div>
+                  <div class="activity-time"><%= new Date(stats.lastLogin).toLocaleDateString() %></div>
+                </div>
+              </div>
+              <% } %>
+            </div>
+            <button class="btn btn-outline-primary mt-3" onclick="loadMoreActivity()">
+              <i class="bi bi-arrow-clockwise"></i>
+              Refresh Activity
+            </button>
+          </div>
+
+          <!-- Recent Code Snippets -->
+          <div class="profile-card">
+            <h3 class="card-title">
+              <i class="bi bi-code-square"></i>
+              Recent Code Snippets
+            </h3>
+            <div id="codeSnippetsList">
+              <% if (stats && stats.recentCodeSnippets && stats.recentCodeSnippets.length > 0) { %>
+                <% stats.recentCodeSnippets.slice(0, 3).forEach(function(snippet) { %>
+                <div class="code-snippet-item">
+                  <div class="snippet-header">
+                    <span class="snippet-language"><%= snippet.language %></span>
+                    <span class="snippet-time"><%= new Date(snippet.timestamp).toLocaleDateString() %></span>
+                  </div>
+                  <div class="snippet-info">
+                    <small class="text-muted">
+                      <%= snippet.linesOfCode %> lines in <%= snippet.roomName || snippet.roomId %>
+                      <% if (snippet.executionTime) { %>
+                        • <%= snippet.executionTime %>ms
+                      <% } %>
+                    </small>
+                  </div>
+                  <pre class="code-preview"><code><%= snippet.code.substring(0, 200) %><% if (snippet.code.length > 200) { %>...<% } %></code></pre>
+                </div>
+                <% }); %>
+              <% } else { %>
+                <div class="empty-state">
+                  <i class="bi bi-code-slash" style="font-size: 2rem; color: rgba(255,255,255,0.3);"></i>
+                  <p class="text-muted">No code snippets yet. Start coding to see your recent work here!</p>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="profile-card">
+            <h3 class="card-title">
+              <i class="bi bi-lightning"></i>
+              Quick Actions
+            </h3>
+            <div class="action-buttons">
+              <a href="/dashboard" class="action-btn">
+                <i class="bi bi-house"></i>
+                Go to Dashboard
+              </a>
+              <a href="#" class="action-btn" onclick="createNewRoom()">
+                <i class="bi bi-plus-circle"></i>
+                Create Room
+              </a>
+              <a href="#" class="action-btn secondary" onclick="shareProfile()">
+                <i class="bi bi-share"></i>
+                Share Profile
+              </a>
+              <a href="#" class="action-btn secondary" onclick="exportData()">
+                <i class="bi bi-download"></i>
+                Export Data
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="profile-sidebar">
+          <!-- Account Info -->
+          <div class="profile-card">
+            <h3 class="card-title">
+              <i class="bi bi-info-circle"></i>
+              Account Info
+            </h3>
+            <div class="settings-item">
+              <div class="settings-label">
+                <i class="bi bi-person"></i>
+                Full Name
+              </div>
+              <span><%= user && user.fullname ? user.fullname : 'Not set' %></span>
+            </div>
+            <div class="settings-item">
+              <div class="settings-label">
+                <i class="bi bi-envelope"></i>
+                 
+              </div>
+              <span><%= user && user.email ? user.email : 'Not set' %></span>
+            </div>
+            <div class="settings-item">
+              <div class="settings-label">
+                <i class="bi bi-shield"></i>
+                Account Type
+              </div>
+              <span><%= user && user.googleId ? 'Google' : 'Local' %></span>
+            </div>
+          </div>
+
+          <!-- Privacy Settings -->
+          <div class="profile-card">
+            <h3 class="card-title">
+              <i class="bi bi-gear"></i>
+              Settings
+            </h3>
+            <div class="settings-item">
+              <div class="settings-label">
+                <i class="bi bi-bell"></i>
+                Notifications
+              </div>
+              <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
+            </div>
+            <div class="settings-item">
+              <div class="settings-label">
+                <i class="bi bi-eye"></i>
+                Public Profile
+              </div>
+              <div class="toggle-switch" onclick="toggleSetting(this)"></div>
+            </div>
+            <div class="settings-item">
+              <div class="settings-label">
+                <i class="bi bi-moon"></i>
+                Dark Mode
+              </div>
+              <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
+            </div>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="profile-card">
+            <h3 class="card-title">
+              <i class="bi bi-exclamation-triangle text-danger"></i>
+              Danger Zone
+            </h3>
+            <div class="action-buttons">
+              <button class="action-btn secondary" onclick="resetAccount()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Reset Account
+              </button>
+              <button class="action-btn" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);" onclick="deleteAccount()">
+                <i class="bi bi-trash"></i>
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // Initialize profile image fallback
+    document.addEventListener('DOMContentLoaded', function() {
+      const profileImages = document.querySelectorAll('.profile-avatar img, .navbar-profile img');
+      
+      profileImages.forEach(img => {
+        img.addEventListener('error', function() {
+          this.style.display = 'none';
+          // Show initials instead
+          const parent = this.parentElement;
+          if (parent.hasAttribute('data-initials')) {
+            parent.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            if (!parent.textContent.trim()) {
+              parent.textContent = parent.getAttribute('data-initials');
+            }
+          }
+        });
+        
+        // Check if image is already loaded and broken
+        if (img.complete && img.naturalHeight === 0) {
+          img.dispatchEvent(new Event('error'));
+        }
+      });
+
+      // Load activity on page load
+      loadMoreActivity();
+    });
+
+    // Toggle settings
+    function toggleSetting(element) {
+      element.classList.toggle('active');
+      
+      // Save settings to backend
+      const settingType = element.previousElementSibling.textContent.toLowerCase().trim();
+      const isActive = element.classList.contains('active');
+      
+      saveSettings(settingType, isActive);
+    }
+
+    // Save settings to backend
+    function saveSettings(settingType, value) {
+      const settings = {
+        notifications: { email: true, browser: true },
+        theme: 'dark',
+        defaultLanguage: 'javascript'
+      };
+
+      if (settingType.includes('notification')) {
+        settings.notifications.browser = value;
+      } else if (settingType.includes('public')) {
+        // Handle public profile setting
+        console.log('Public profile:', value);
+      } else if (settingType.includes('dark')) {
+        settings.theme = value ? 'dark' : 'light';
+      }
+
+      fetch('/api/profile/preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification('Settings saved successfully', 'success');
+        } else {
+          showNotification('Failed to save settings', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error saving settings:', error);
+        showNotification('Failed to save settings', 'error');
+      });
+    }
+
+    // Create new room function
+    function createNewRoom() {
+      // Redirect to dashboard with create room modal open
+      window.location.href = '/dashboard#create-room';
+    }
+
+    // Reset account function
+    function resetAccount() {
+      if (confirm('Are you sure you want to reset your account? This will delete all your rooms and reset your activity data.')) {
+        fetch('/api/profile/reset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showNotification('Account reset successfully. Please refresh the page.', 'success');
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            showNotification('Failed to reset account: ' + data.error, 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error resetting account:', error);
+          showNotification('Failed to reset account', 'error');
+        });
+      }
+    }
+
+    // Delete account function
+    function deleteAccount() {
+      if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+        if (confirm('This will permanently delete all your data, rooms, and account. Are you absolutely sure?')) {
+          fetch('/api/profile/delete', {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              showNotification('Account deleted successfully. Redirecting to home page...', 'success');
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 2000);
+            } else {
+              showNotification('Failed to delete account: ' + data.error, 'error');
+            }
+          })
+          .catch(error => {
+            console.error('Error deleting account:', error);
+            showNotification('Failed to delete account', 'error');
+          });
+        }
+      }
+    }
+
+    // Refresh profile statistics
+    function refreshStats() {
+      const refreshButton = document.querySelector('button[onclick="refreshStats()"]');
+      const originalText = refreshButton.innerHTML;
+      
+      refreshButton.innerHTML = '<i class="bi bi-arrow-clockwise rotating"></i> Refreshing...';
+      refreshButton.disabled = true;
+      
+      fetch('/api/profile/refresh-stats')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Update statistics on the page
+            document.getElementById('rooms-created').textContent = data.stats.roomsCreated;
+            document.getElementById('collaborations').textContent = data.stats.collaborations;
+            document.getElementById('lines-of-code').textContent = data.stats.linesOfCode.toLocaleString();
+            
+            // Update coding time
+            const codingTimeEl = document.getElementById('coding-time');
+            if (data.stats.totalCodingHours > 0 || data.stats.totalCodingMinutes > 0) {
+              codingTimeEl.textContent = `${data.stats.totalCodingHours}h ${data.stats.totalCodingMinutes}m`;
+            } else {
+              codingTimeEl.textContent = '0h 0m';
+            }
+            
+            showNotification('Statistics refreshed successfully!', 'success');
+          } else {
+            showNotification('Failed to refresh statistics', 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error refreshing stats:', error);
+          showNotification('Failed to refresh statistics', 'error');
+        })
+        .finally(() => {
+          refreshButton.innerHTML = originalText;
+          refreshButton.disabled = false;
+        });
+    }
+
+    // Load more activity
+    function loadMoreActivity() {
+      fetch('/api/profile/activity')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            updateActivityList(data.activities);
+          } else {
+            console.error('Failed to load activity');
+          }
+        })
+        .catch(error => {
+          console.error('Error loading activity:', error);
+        });
+    }
+
+    // Update activity list
+    function updateActivityList(activities) {
+      const activityList = document.getElementById('activityList');
+      
+      // Keep existing welcome and verified items
+      const existingItems = activityList.innerHTML;
+      
+      // Add new activities
+      activities.forEach(activity => {
+        const activityItem = document.createElement('div');
+        activityItem.className = 'activity-item';
+        activityItem.innerHTML = `
+          <div class="activity-icon">
+            <i class="bi bi-${activity.icon}"></i>
+          </div>
+          <div class="activity-content">
+            <div class="activity-title">${activity.title}</div>
+            <div class="activity-time">${activity.time}</div>
+          </div>
+        `;
+        activityList.appendChild(activityItem);
+      });
+    }
+
+    // Share profile function
+    function shareProfile() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'My CodeCollab Profile',
+          text: 'Check out my coding profile on CodeCollab!',
+          url: window.location.href
+        }).catch(err => {
+          console.log('Error sharing:', err);
+          copyProfileUrl();
+        });
+      } else {
+        copyProfileUrl();
+      }
+    }
+
+    // Copy profile URL to clipboard
+    function copyProfileUrl() {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        showNotification('Profile URL copied to clipboard!', 'success');
+      }).catch(err => {
+        console.error('Failed to copy URL:', err);
+        showNotification('Failed to copy URL', 'error');
+      });
+    }
+
+    // Export data function
+    function exportData() {
+      window.open('/api/profile/export', '_blank');
+      showNotification('Data export started...', 'success');
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.innerHTML = `
+        <div class="notification-content">
+          <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+          ${message}
+        </div>
+      `;
+      
+      // Add styles
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+        animation: slideInRight 0.3s ease-out;
+        max-width: 350px;
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Remove after 4 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 300);
+      }, 4000);
+    }
+
+    // Add smooth scrolling
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth'
+          });
+        }
+      });
+    });
+
+    // Add animation on scroll
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animation = 'fadeIn 0.6s ease-out';
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.profile-card, .stat-card').forEach(el => {
+      observer.observe(el);
+    });
+
+    // Add notification animations to style
+    const notificationStyles = document.createElement('style');
+    notificationStyles.textContent = `
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+      
+      .notification-content {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .rotating {
+        animation: rotate 1s linear infinite;
+      }
+
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(notificationStyles);
+  </script>
+</body>
+</html>

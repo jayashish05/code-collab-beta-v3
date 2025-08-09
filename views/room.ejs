@@ -5218,8 +5218,18 @@
 
       } catch (error) {
         console.error('AI Chat error:', error);
-        addAIMessage('Sorry, I encountered an error. Please try again.', 'assistant', true);
-        showNotification('AI Chat error: ' + error.message, 'error');
+        
+        // Handle specific error types
+        if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          addAIMessage('🔒 AI Chat requires a Pro subscription. Please upgrade to access this feature.', 'assistant', true);
+          showNotification('AI Chat requires Pro subscription. Click here to upgrade!', 'warning', 8000);
+        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          addAIMessage('Please sign in to use AI Chat features.', 'assistant', true);
+          showNotification('Please sign in to access AI features', 'warning');
+        } else {
+          addAIMessage('Sorry, I encountered an error. Please try again.', 'assistant', true);
+          showNotification('AI Chat error: ' + error.message, 'error');
+        }
       } finally {
         hideAILoading();
         isAIResponding = false;
@@ -5270,8 +5280,18 @@
 
       } catch (error) {
         console.error('AI Analysis error:', error);
-        addAIMessage('Sorry, I encountered an error analyzing your code. Please try again.', 'assistant', true);
-        showNotification('AI Analysis error: ' + error.message, 'error');
+        
+        // Handle specific error types
+        if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          addAIMessage('🔒 AI Code Analysis requires a Pro subscription. Please upgrade to access this feature.', 'assistant', true);
+          showNotification('AI Analysis requires Pro subscription. Click here to upgrade!', 'warning', 8000);
+        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          addAIMessage('Please sign in to use AI Analysis features.', 'assistant', true);
+          showNotification('Please sign in to access AI features', 'warning');
+        } else {
+          addAIMessage('Sorry, I encountered an error analyzing your code. Please try again.', 'assistant', true);
+          showNotification('AI Analysis error: ' + error.message, 'error');
+        }
       } finally {
         hideAILoading();
         isAIResponding = false;

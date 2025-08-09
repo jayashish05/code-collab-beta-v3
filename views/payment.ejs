@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Upgrade to CodeCollab Pro | CodeCollab</title>
+  <%- include('head-scripts') %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.24/build/spline-viewer.js"></script>
+  <script src="/js/css-fallback.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .spline-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 1;
+    }
+
+    /* Top Navbar */
+    .top-navbar {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: white !important;
+      text-decoration: none;
+    }
+
+    .navbar-profile {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s;
+    }
+
+    .navbar-profile:hover {
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: scale(1.05);
+    }
+
+    .navbar-profile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Payment Container */
+    .payment-container {
+      min-height: calc(100vh - 60px);
+      display: flex;
+      align-items: center;
+      padding: 2rem 0;
+    }
+
+    .payment-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      color: white;
+      padding: 2.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .payment-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+    }
+
+    .pro-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .price-section {
+      text-align: center;
+      margin: 2rem 0;
+    }
+
+    .price {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #3b82f6;
+      margin-bottom: 0.5rem;
+    }
+
+    .price-period {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1rem;
+    }
+
+    .features-grid {
+      display: grid;
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .feature-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(59, 130, 246, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .feature-icon.code {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+
+    .feature-icon.voice {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .feature-icon.users {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    .feature-icon.ai {
+      background: rgba(139, 92, 246, 0.2);
+      color: #8b5cf6;
+    }
+
+    .feature-content h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: white;
+    }
+
+    .feature-content p {
+      margin: 0.25rem 0 0 0;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .payment-button {
+      width: 100%;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .payment-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+    }
+
+    .payment-button:active {
+      transform: translateY(0);
+    }
+
+    .payment-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .back-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      margin-bottom: 1.5rem;
+    }
+
+    .back-button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      text-decoration: none;
+      transform: translateX(-2px);
+    }
+
+    .security-info {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 8px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .comparison-section {
+      margin-top: 3rem;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .comparison-title {
+      text-align: center;
+      color: white;
+      margin-bottom: 1.5rem;
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .comparison-table {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      text-align: center;
+    }
+
+    .comparison-header {
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .comparison-row {
+      padding: 0.75rem;
+      color: rgba(255, 255, 255, 0.7);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .comparison-pro {
+      color: #3b82f6;
+      font-weight: 600;
+    }
+
+    /* Success/Error Messages */
+    .alert {
+      border: none;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #10b981;
+    }
+
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .payment-card {
+        padding: 1.5rem;
+        margin: 1rem;
+      }
+
+      .price {
+        font-size: 2.5rem;
+      }
+
+      .comparison-table {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+
+      .comparison-header {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Loading Animation */
+    .loading-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 0.5rem;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Theme Toggle Buttons */
+    .ios-theme-toggle,
+    .ios-performance-toggle {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 1001;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .ios-performance-toggle {
+      top: 140px;
+    }
+
+    .ios-theme-toggle:hover,
+    .ios-performance-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    .ios-theme-toggle button,
+    .ios-performance-toggle button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- Spline Background -->
+  <div class="spline-container">
+    <spline-viewer url="https://prod.spline.design/HAPDwhAWHdkj3Od2/scene.splinecode"></spline-viewer>
+  </div>
+
+  <!-- Theme Toggle Button -->
+  <div class="ios-theme-toggle">
+    <button id="themeToggle" title="Toggle Dark/Light Mode">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"></circle>
+        <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Performance Mode Toggle Button -->
+  <div class="ios-performance-toggle">
+    <button id="performanceToggle" title="Toggle Performance Mode">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Top Navbar -->
+  <nav class="navbar navbar-expand-lg top-navbar">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand" href="/dashboard">
+        <i class="bi bi-code-slash me-2"></i>
+        CodeCollab
+      </a>
+      
+      <div class="d-flex align-items-center">
+        <% if (user && user.picture) { %>
+          <div class="navbar-profile">
+            <img src="<%= user.picture %>" alt="Profile" referrerpolicy="no-referrer">
+          </div>
+        <% } else { %>
+          <div class="navbar-profile bg-primary d-flex align-items-center justify-content-center">
+            <i class="bi bi-person-fill"></i>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="payment-container">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+          <div class="payment-card">
+            <a href="/dashboard" class="back-button">
+              <i class="bi bi-arrow-left"></i>
+              Back to Dashboard
+            </a>
+
+            <div class="pro-badge">
+              <i class="bi bi-star-fill"></i>
+              CodeCollab Pro
+            </div>
+
+            <h1 class="h2 mb-3">Unlock Advanced Coding Features</h1>
+            <p class="mb-4" style="color: rgba(255, 255, 255, 0.8);">
+              Supercharge your coding experience with AI-powered tools, unlimited room capacity, and exclusive pro features.
+            </p>
+
+            <!-- Error/Success Messages -->
+            <% if (typeof error !== 'undefined' && error) { %>
+              <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <%= error %>
+              </div>
+            <% } %>
+
+            <% if (typeof success !== 'undefined' && success) { %>
+              <div class="alert alert-success">
+                <i class="bi bi-check-circle me-2"></i>
+                <%= success %>
+              </div>
+            <% } %>
+
+            <!-- Price Section -->
+            <div class="price-section">
+              <div class="price">₹99</div>
+              <div class="price-period">per month</div>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="features-grid">
+              <div class="feature-item">
+                <div class="feature-icon ai">
+                  <i class="bi bi-cpu"></i>
+                </div>
+                <div class="feature-content">
+                  <h4>AI Code Assistant</h4>
+                  <p>Analyze, debug, optimize and explain your code with advanced AI</p>
+                </div>
+              </div>
+
+              <div class="feature-item">
+                <div class="feature-icon voice">
+                  <i class="bi bi-mic"></i>
+                </div>
+                <div class="feature-content">
+                  <h4>Voice Chat</h4>
+                  <p>Real-time voice communication with your team members</p>
+                </div>
+              </div>
+
+              <div class="feature-item">
+                <div class="feature-icon users">
+                  <i class="bi bi-people"></i>
+                </div>
+                <div class="feature-content">
+                  <h4>Unlimited Room Capacity</h4>
+                  <p>Host rooms with more than 4 members for larger teams</p>
+                </div>
+              </div>
+
+              <div class="feature-item">
+                <div class="feature-icon code">
+                  <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="feature-content">
+                  <h4>Priority Support</h4>
+                  <p>Get priority customer support and exclusive updates</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Button -->
+            <button id="paymentButton" class="payment-button">
+              <span class="loading-spinner"></span>
+              <span class="button-text">Upgrade to Pro - ₹99/month</span>
+            </button>
+
+            <!-- Security Info -->
+            <div class="security-info">
+              <i class="bi bi-shield-fill-check me-2"></i>
+              Secure payment powered by Razorpay. Your payment information is encrypted and secure.
+            </div>
+
+            <!-- Comparison Section -->
+            <div class="comparison-section">
+              <h3 class="comparison-title">Free vs Pro</h3>
+              <div class="comparison-table">
+                <div class="comparison-header">Feature</div>
+                <div class="comparison-header">Free</div>
+                <div class="comparison-header">Pro</div>
+                
+                <div class="comparison-row">AI Code Analysis</div>
+                <div class="comparison-row">❌</div>
+                <div class="comparison-row comparison-pro">✅</div>
+                
+                <div class="comparison-row">Voice Chat</div>
+                <div class="comparison-row">❌</div>
+                <div class="comparison-row comparison-pro">✅</div>
+                
+                <div class="comparison-row">Room Capacity</div>
+                <div class="comparison-row">4 members</div>
+                <div class="comparison-row comparison-pro">Unlimited</div>
+                
+                <div class="comparison-row">Code Debugging</div>
+                <div class="comparison-row">❌</div>
+                <div class="comparison-row comparison-pro">✅</div>
+                
+                <div class="comparison-row">Priority Support</div>
+                <div class="comparison-row">❌</div>
+                <div class="comparison-row comparison-pro">✅</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Theme Toggle
+    document.getElementById('themeToggle').addEventListener('click', function() {
+      document.body.classList.toggle('dark-mode');
+      localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    });
+
+    // Performance Toggle
+    document.getElementById('performanceToggle').addEventListener('click', function() {
+      const splineContainer = document.querySelector('.spline-container');
+      if (splineContainer.style.display === 'none') {
+        splineContainer.style.display = 'block';
+        localStorage.setItem('performance', 'normal');
+      } else {
+        splineContainer.style.display = 'none';
+        localStorage.setItem('performance', 'high');
+      }
+    });
+
+    // Load saved preferences
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark-mode');
+    }
+    if (localStorage.getItem('performance') === 'high') {
+      document.querySelector('.spline-container').style.display = 'none';
+    }
+
+    // Razorpay Payment Integration
+    document.getElementById('paymentButton').addEventListener('click', function() {
+      const button = this;
+      const spinner = button.querySelector('.loading-spinner');
+      const buttonText = button.querySelector('.button-text');
+      
+      // Show loading state
+      button.disabled = true;
+      spinner.style.display = 'inline-block';
+      buttonText.textContent = 'Processing...';
+
+      // Create order
+      fetch('/api/payment/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: 9900, // ₹99 in paise
+          currency: 'INR'
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Initialize Razorpay
+          const options = {
+            key: '<%= razorpayKeyId %>', // Razorpay Key ID
+            amount: data.order.amount,
+            currency: data.order.currency,
+            name: 'CodeCollab',
+            description: 'CodeCollab Pro Subscription',
+            image: '/img/logo.png', // Your logo
+            order_id: data.order.id,
+            handler: function(response) {
+              // Payment successful
+              verifyPayment(response);
+            },
+            prefill: {
+              name: '<%= user.fullname %>',
+              email: '<%= user.email %>',
+              contact: '<%= user.phone || "" %>'
+            },
+            notes: {
+              subscription: 'CodeCollab Pro Monthly'
+            },
+            theme: {
+              color: '#3b82f6'
+            },
+            modal: {
+              ondismiss: function() {
+                // Reset button state when modal is closed
+                resetButtonState();
+              }
+            }
+          };
+
+          const rzp = new Razorpay(options);
+          rzp.open();
+        } else {
+          throw new Error(data.message || 'Failed to create payment order');
+        }
+      })
+      .catch(error => {
+        console.error('Payment error:', error);
+        alert('Payment failed: ' + error.message);
+        resetButtonState();
+      });
+
+      function resetButtonState() {
+        button.disabled = false;
+        spinner.style.display = 'none';
+        buttonText.textContent = 'Upgrade to Pro - ₹99/month';
+      }
+
+      function verifyPayment(paymentResponse) {
+        fetch('/api/payment/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            razorpay_order_id: paymentResponse.razorpay_order_id,
+            razorpay_payment_id: paymentResponse.razorpay_payment_id,
+            razorpay_signature: paymentResponse.razorpay_signature
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Payment verified successfully
+            window.location.href = '/dashboard?payment=success&message=' + encodeURIComponent('Welcome to CodeCollab Pro! Your subscription is now active.');
+          } else {
+            throw new Error(data.message || 'Payment verification failed');
+          }
+        })
+        .catch(error => {
+          console.error('Verification error:', error);
+          alert('Payment verification failed: ' + error.message);
+          resetButtonState();
+        });
+      }
+    });
+  </script>
+</body>
+</html>

@@ -72,16 +72,25 @@
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 0.75rem 1.5rem;
+      padding: 0.5rem 1.5rem;
       position: sticky;
       top: 0;
       z-index: 1000;
+      height: 60px;
     }
 
     .navbar-brand {
       font-weight: 700;
       font-size: 1.5rem;
       color: white;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .navbar-brand:hover {
+      color: white !important;
       text-decoration: none;
     }
 
@@ -114,6 +123,32 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+    }
+
+    /* Fallback for failed profile images */
+    .navbar-profile img:not([src]), 
+    .navbar-profile img[src=""], 
+    .navbar-profile img[src*="error"] {
+      display: none;
+    }
+
+    .navbar-profile:not(:has(img[src]:not([src=""])):not([src*="error"])) {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .navbar-profile:not(:has(img[src]:not([src=""])):not([src*="error"])):before {
+      content: attr(data-initials);
+    }
+
+    /* Remove dropdown arrow from profile */
+    .dropdown-toggle::after {
+      display: none !important;
     }
 
     /* Main content layout */
@@ -181,7 +216,6 @@
       .sidebar-overlay.show {
         display: block;
       }
-    }
     }
 
     .sidebar-section {
@@ -469,18 +503,6 @@
       border-radius: 50%;
     }
 
-    .avatar.online::after {
-      content: '';
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      background: #4cd964;
-      border-radius: 50%;
-      border: 2px solid rgba(15, 23, 42, 0.9);
-      bottom: 0;
-      right: 0;
-    }
-
     /* Quick join section */
     .quick-join {
       display: flex;
@@ -572,31 +594,148 @@
     .dark-mode .dashboard-card:hover {
       background: rgba(44, 44, 46, 0.6);
     }
+
+    /* Pro Status Card Styles */
+    .pro-status-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pro-status-card.is-pro::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+    }
+
+    .pro-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .free-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.8);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .pro-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .pro-feature-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .pro-feature-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .pro-feature-icon.ai {
+      background: rgba(139, 92, 246, 0.2);
+      color: #8b5cf6;
+    }
+
+    .pro-feature-icon.voice {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .pro-feature-icon.users {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    .pro-feature-icon.support {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+
+    .pro-feature-text {
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 500;
+    }
+
+    .pro-feature-text.disabled {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .subscription-info {
+      margin: 1rem 0;
+      padding: 1rem;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .upgrade-button {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .upgrade-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+      color: white;
+      text-decoration: none;
+    }
+
+    @media (max-width: 768px) {
+      .pro-features {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
   <!-- Spline Background -->
   <div class="spline-container">
     <spline-viewer url="https://prod.spline.design/HAPDwhAWHdkj3Od2/scene.splinecode"></spline-viewer>
-  </div>
-
-  <!-- Theme Toggle Button -->
-  <div class="ios-theme-toggle">
-    <button id="themeToggle" title="Toggle Dark/Light Mode">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="5"></circle>
-        <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"></path>
-      </svg>
-    </button>
-  </div>
-
-  <!-- Performance Mode Toggle Button -->
-  <div class="ios-performance-toggle">
-    <button id="performanceToggle" title="Toggle Performance Mode">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-      </svg>
-    </button>
   </div>
 
   <div class="dashboard-container">
@@ -610,7 +749,10 @@
           <span></span>
         </button>
         
-        <a class="navbar-brand" href="#">CodeCollab</a>
+        <a class="navbar-brand" href="#">
+          <i class="bi bi-code-slash me-2"></i>
+          CodeCollab
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -626,16 +768,28 @@
                 <i class="bi bi-gear"></i>
               </a>
             </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" id="themeToggle" data-bs-toggle="tooltip" data-bs-title="Toggle Dark/Light Mode">
+                <i class="bi bi-sun"></i>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" id="performanceToggle" data-bs-toggle="tooltip" data-bs-title="Toggle Performance Mode">
+                <i class="bi bi-lightning"></i>
+              </a>
+            </li>
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <div class="navbar-profile">
-                  <img src="<%= user && user.picture ? user.picture : 'https://randomuser.me/api/portraits/men/32.jpg' %>" alt="Profile">
+                <div class="navbar-profile" data-initials="<%= user && user.fullname ? user.fullname.split(' ').map(n => n[0]).join('').toUpperCase() : 'U' %>">
+                  <img src="<%= user && user.picture ? user.picture : 'https://randomuser.me/api/portraits/men/32.jpg' %>" 
+                       alt="Profile" 
+                       id="profileImage">
                 </div>
               </a>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                <li><a class="dropdown-item" href="#"><i class="bi bi-person-circle me-2"></i> <%= user && user.fullname ? user.fullname : 'User' %></a></li>
+                <li><a class="dropdown-item" href="/profile"><i class="bi bi-person-circle me-2"></i> <%= user && user.fullname ? user.fullname : 'User' %></a></li>
                 <li><a class="dropdown-item" href="#"><i class="bi bi-envelope me-2"></i> <%= user && user.email ? user.email : 'No email' %></a></li>
-                <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i> Account Settings</a></li>
+                <li><a class="dropdown-item" href="/profile"><i class="bi bi-gear me-2"></i> Account Settings</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="/auth/signout"><i class="bi bi-box-arrow-right me-2"></i> Sign Out</a></li>
               </ul>
@@ -713,6 +867,26 @@
             </li>
           </ul>
         </div>
+
+        <div class="sidebar-section">
+          <h2 class="sidebar-heading">Personal</h2>
+          <ul class="sidebar-menu">
+            <li>
+              <a href="/profile">
+                <i class="bi bi-person-circle"></i> My Profile
+              </a>
+            </li>
+            <li>
+              <a href="#">
+                <i class="bi bi-gear"></i> Settings
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-section" id="sidebarProSection">
+          <!-- Pro section content will be loaded via JavaScript -->
+        </div>
       </div>
 
       <!-- Dashboard Content -->
@@ -741,6 +915,15 @@
             </div>
             <p class="text-white-50">Your collaborative coding workspace is ready. Start a new room or join an existing one.</p>
             <div class="active-users-badge" id="activeUsersCount"></div>
+          </div>
+        </div>
+
+        <!-- Pro Subscription Status/Upgrade Section -->
+        <div class="row mb-4" id="proSection">
+          <div class="col">
+            <div class="dashboard-card pro-status-card" id="proStatusCard">
+              <!-- Content will be loaded via JavaScript -->
+            </div>
           </div>
         </div>
 
@@ -1181,6 +1364,9 @@
       // Fetch active rooms data
       fetchActiveRooms();
 
+      // Fetch and display subscription status
+      fetchSubscriptionStatus();
+
       // Set interval to update active rooms every 10 seconds
       setInterval(fetchActiveRooms, 10000);
 
@@ -1234,6 +1420,25 @@
           notification.remove();
         }, 2000);
       });
+
+      // Handle profile image errors
+      const profileImage = document.getElementById('profileImage');
+      if (profileImage) {
+        profileImage.addEventListener('error', function() {
+          const profileContainer = this.parentElement;
+          const initials = profileContainer.getAttribute('data-initials') || 'U';
+          
+          this.style.display = 'none';
+          profileContainer.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+          profileContainer.style.color = 'white';
+          profileContainer.style.display = 'flex';
+          profileContainer.style.alignItems = 'center';
+          profileContainer.style.justifyContent = 'center';
+          profileContainer.style.fontSize = '0.9rem';
+          profileContainer.style.fontWeight = '600';
+          profileContainer.innerHTML = initials;
+        });
+      }
     });
 
     // Function to fetch active rooms
@@ -1412,6 +1617,177 @@
       // Show the modal
       const passwordModal = new bootstrap.Modal(document.getElementById('passwordPromptModal'));
       passwordModal.show();
+    }
+
+    // Function to fetch subscription status
+    function fetchSubscriptionStatus() {
+      fetch('/api/subscription/status')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          updateProStatusUI(data.subscription);
+        })
+        .catch(error => {
+          console.error('Error fetching subscription status:', error);
+          // Show default free status on error
+          updateProStatusUI({ isPro: false, planType: 'free' });
+        });
+    }
+
+    // Function to update the Pro status UI
+    function updateProStatusUI(subscription) {
+      const proStatusCard = document.getElementById('proStatusCard');
+      const sidebarProSection = document.getElementById('sidebarProSection');
+      
+      if (subscription.isPro) {
+        // User has Pro subscription
+        proStatusCard.className = 'dashboard-card pro-status-card is-pro';
+        proStatusCard.innerHTML = `
+          <div class="pro-badge">
+            <i class="bi bi-star-fill"></i>
+            CodeCollab Pro
+          </div>
+          <h3 class="text-white mb-3">Welcome to CodeCollab Pro!</h3>
+          <div class="subscription-info">
+            <div><strong>Plan:</strong> Pro Monthly</div>
+            <div><strong>Status:</strong> Active</div>
+            ${subscription.daysRemaining ? `<div><strong>Days Remaining:</strong> ${subscription.daysRemaining}</div>` : ''}
+            ${subscription.subscriptionEnd ? `<div><strong>Renewal Date:</strong> ${new Date(subscription.subscriptionEnd).toLocaleDateString()}</div>` : ''}
+          </div>
+          <div class="pro-features">
+            <div class="pro-feature-item">
+              <div class="pro-feature-icon ai">
+                <i class="bi bi-cpu"></i>
+              </div>
+              <div class="pro-feature-text">AI Code Analysis</div>
+            </div>
+            <div class="pro-feature-item">
+              <div class="pro-feature-icon voice">
+                <i class="bi bi-mic"></i>
+              </div>
+              <div class="pro-feature-text">Voice Chat</div>
+            </div>
+            <div class="pro-feature-item">
+              <div class="pro-feature-icon users">
+                <i class="bi bi-people"></i>
+              </div>
+              <div class="pro-feature-text">Unlimited Room Size</div>
+            </div>
+            <div class="pro-feature-item">
+              <div class="pro-feature-icon support">
+                <i class="bi bi-shield-check"></i>
+              </div>
+              <div class="pro-feature-text">Priority Support</div>
+            </div>
+          </div>
+        `;
+
+        // Update sidebar for Pro users
+        sidebarProSection.innerHTML = `
+          <h2 class="sidebar-heading">Pro Features</h2>
+          <ul class="sidebar-menu">
+            <li>
+              <a href="#" onclick="showProFeature('ai-chat')">
+                <i class="bi bi-cpu"></i> AI Assistant
+              </a>
+            </li>
+            <li>
+              <a href="#" onclick="showProFeature('voice-chat')">
+                <i class="bi bi-mic"></i> Voice Chat
+              </a>
+            </li>
+            <li>
+              <a href="#" onclick="showProFeature('analytics')">
+                <i class="bi bi-graph-up"></i> Analytics
+              </a>
+            </li>
+          </ul>
+        `;
+      } else {
+        // User has free subscription
+        proStatusCard.className = 'dashboard-card pro-status-card';
+        proStatusCard.innerHTML = `
+          <div class="free-badge">
+            <i class="bi bi-person"></i>
+            Free Plan
+          </div>
+          <h3 class="text-white mb-3">Upgrade to CodeCollab Pro</h3>
+          <p class="text-white-50 mb-3">Unlock powerful AI-driven features and enhance your coding experience.</p>
+          <div class="pro-features">
+            <div class="pro-feature-item">
+              <div class="pro-feature-icon ai">
+                <i class="bi bi-cpu"></i>
+              </div>
+              <div class="pro-feature-text disabled">AI Code Analysis</div>
+            </div>
+            <div class="pro-feature-item">
+              <div class="pro-feature-icon voice">
+                <i class="bi bi-mic"></i>
+              </div>
+              <div class="pro-feature-text disabled">Voice Chat</div>
+            </div>
+            <div class="pro-feature-item">
+              <div class="pro-feature-icon users">
+                <i class="bi bi-people"></i>
+              </div>
+              <div class="pro-feature-text disabled">Unlimited Room Size (Currently: 4 max)</div>
+            </div>
+            <div class="pro-feature-item">
+              <div class="pro-feature-icon support">
+                <i class="bi bi-shield-check"></i>
+              </div>
+              <div class="pro-feature-text disabled">Priority Support</div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <a href="/payment" class="upgrade-button">
+              <i class="bi bi-star"></i>
+              Upgrade to Pro - ₹99/month
+            </a>
+          </div>
+        `;
+
+        // Update sidebar for free users with upgrade option
+        sidebarProSection.innerHTML = `
+          <h2 class="sidebar-heading">Upgrade</h2>
+          <ul class="sidebar-menu">
+            <li>
+              <a href="/payment" style="color: #3b82f6; font-weight: 600;">
+                <i class="bi bi-star"></i> Upgrade to Pro
+              </a>
+            </li>
+            <li>
+              <a href="#" onclick="showProFeatures()">
+                <i class="bi bi-info-circle"></i> Pro Features
+              </a>
+            </li>
+          </ul>
+        `;
+      }
+    }
+
+    // Function to show pro feature info (for free users)
+    function showProFeatures() {
+      alert('Pro Features:\\n\\n• AI Code Analysis & Debugging\\n• Voice Chat with team members\\n• Unlimited room capacity\\n• Priority customer support\\n• Advanced code optimization\\n\\nUpgrade to Pro for only ₹99/month!');
+    }
+
+    // Function to show pro feature modals (for pro users)
+    function showProFeature(feature) {
+      switch(feature) {
+        case 'ai-chat':
+          alert('AI Assistant feature will be available in the room editor.');
+          break;
+        case 'voice-chat':
+          alert('Voice Chat feature will be available in active rooms.');
+          break;
+        case 'analytics':
+          alert('Analytics dashboard coming soon!');
+          break;
+      }
     }
   </script>
 
