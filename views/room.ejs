@@ -1505,6 +1505,37 @@
       color: #333;
     }
 
+    /* Edit Permission Button Styles */
+    #request-edit-btn {
+      background-color: #ffc107 !important;
+      border-color: #ffc107 !important;
+      color: #000 !important;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    #request-edit-btn:hover {
+      background-color: #ffca2c !important;
+      border-color: #ffca2c !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+    }
+
+    #done-editing-btn {
+      background-color: #28a745 !important;
+      border-color: #28a745 !important;
+      color: #fff !important;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    #done-editing-btn:hover {
+      background-color: #218838 !important;
+      border-color: #218838 !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    }
+
     .message {
       margin-bottom: 0.5rem;
       max-width: 80%;
@@ -1641,6 +1672,12 @@
 
       .theme-grid {
         grid-template-columns: repeat(2, 1fr);
+      }
+
+      /* Hide edit buttons on smaller screens to save space */
+      #request-edit-btn,
+      #done-editing-btn {
+        display: none !important;
       }
     }
 
@@ -2006,6 +2043,9 @@
         <span class="ms-2 text-muted">
           <i class="fas fa-users"></i> <span id="online-count">1</span> online
         </span>
+        <span class="ms-3 text-info" id="current-editor-indicator" style="display: none;">
+          <i class="fas fa-edit"></i> <span id="current-editor-name">You</span> is editing
+        </span>
       </div>
       <div class="d-flex align-items-center">
         <div class="dropdown me-3">
@@ -2036,6 +2076,13 @@
         </button>
         <button class="btn btn-sm btn-primary me-2" id="run-code">
           <i class="fas fa-play"></i> Run
+        </button>
+        <!-- Edit Permission Controls -->
+        <button class="btn btn-sm btn-warning me-2" id="request-edit-btn" style="display: none;">
+          <i class="fas fa-hand-paper"></i> Request Edit Access
+        </button>
+        <button class="btn btn-sm btn-success me-2" id="done-editing-btn" style="display: none;">
+          <i class="fas fa-check"></i> Done Editing
         </button>
         <button class="btn btn-sm btn-outline-danger" id="leave-room">Leave</button>
         <button class="theme-toggle" id="theme-toggle">
@@ -2503,6 +2550,18 @@
     let aiConversationHistory = [];
     let isAIResponding = false;
 
+    // Edit Permission variables
+    let isCurrentEditor = false;
+    let currentEditor = null;
+    let isOwner = '<%= roomData.createdBy === (req.user._id || req.user.id || req.user.googleId) ? "true" : "false" %>' === 'true';
+    
+    // Initialize edit permission state
+    // Owner starts as the editor by default
+    if (isOwner) {
+      isCurrentEditor = true;
+      currentEditor = userId;
+    }
+
     // Initialize Socket.IO connection
     function initializeSocket() {
       socket = io({
@@ -2566,9 +2625,26 @@
           }
         } else {
           console.log('Ignoring own join event for participant list');
-          // Request cursor positions when we join
+          // Initialize edit permissions for current user
+          currentEditor = data.currentEditor;
+          isOwner = data.isOwner;
+          isCurrentEditor = (data.currentEditor === userId);
+          
+          // Update UI based on edit permissions
+          updateEditButtons();
+          
+          // Request cursor positions after a short delay and with retry
           setTimeout(() => {
+            console.log('Requesting cursor positions...');
             socket.emit('request_cursor_positions', { roomId });
+            
+            // Retry after another delay if we didn't get any cursors
+            setTimeout(() => {
+              if (Object.keys(remoteCursors).length === 0) {
+                console.log('No cursors received, retrying...');
+                socket.emit('request_cursor_positions', { roomId });
+              }
+            }, 2000);
           }, 1000);
         }
       });
@@ -2633,19 +2709,46 @@
       socket.on('cursor_updated', (data) => {
         if (data.userId === userId) return;
         
-        console.log('Received cursor update:', data);
-        updateRemoteCursor(data.userId, data.username, data.cursorPosition, data.color);
+        console.log('Received cursor update from:', data.username, 'Position:', data.cursorPosition);
+        
+        // Wait for editor to be ready before processing cursor updates
+        if (!editor) {
+          console.log('Editor not ready, delaying cursor update...');
+          setTimeout(() => {
+            if (editor) {
+              updateRemoteCursor(data.userId, data.username, data.cursorPosition, data.color);
+            }
+          }, 1000);
+        } else {
+          updateRemoteCursor(data.userId, data.username, data.cursorPosition, data.color);
+        }
       });
 
       // Current cursors positions (after requesting)
       socket.on('cursor_positions', (data) => {
         const { cursors } = data;
-        console.log('Received cursor positions:', cursors);
+        console.log('Received cursor positions:', cursors.length, 'cursors');
 
-        // Update all remote cursors
-        for (const cursor of cursors) {
-          if (cursor.userId !== userId) {
-            updateRemoteCursor(cursor.userId, cursor.username, cursor.position, cursor.color);
+        // Wait for editor to be ready before processing cursor positions
+        if (!editor) {
+          console.log('Editor not ready, delaying cursor positions...');
+          setTimeout(() => {
+            if (editor) {
+              for (const cursor of cursors) {
+                if (cursor.userId !== userId) {
+                  console.log('Setting up cursor for:', cursor.username);
+                  updateRemoteCursor(cursor.userId, cursor.username, cursor.position, cursor.color);
+                }
+              }
+            }
+          }, 1000);
+        } else {
+          // Update all remote cursors immediately
+          for (const cursor of cursors) {
+            if (cursor.userId !== userId) {
+              console.log('Setting up cursor for:', cursor.username);
+              updateRemoteCursor(cursor.userId, cursor.username, cursor.position, cursor.color);
+            }
           }
         }
       });
@@ -2762,6 +2865,76 @@
 
         // Scroll terminal to bottom
         terminal.scrollTop = terminal.scrollHeight;
+      });
+
+      // Edit Permission Events
+      socket.on('edit_permission_requested', (data) => {
+        const { fromUserId, fromUsername } = data;
+        
+        // Show confirmation dialog
+        if (confirm(`${fromUsername} is requesting edit access. Grant permission?`)) {
+          // Grant permission
+          socket.emit('respond_edit_permission', {
+            roomId: roomId,
+            userId: userId,
+            grantedUserId: fromUserId,
+            granted: true,
+            username: username
+          });
+        } else {
+          // Deny permission
+          socket.emit('respond_edit_permission', {
+            roomId: roomId,
+            userId: userId,
+            grantedUserId: fromUserId,
+            granted: false,
+            username: username
+          });
+        }
+      });
+
+      socket.on('edit_permission_granted', (data) => {
+        isCurrentEditor = data.isEditor;
+        updateEditButtons();
+        
+        showNotification('Edit permission granted!', 'success');
+        if (data.grantedBy) {
+          addSystemMessage(`You have been granted edit permission by ${data.grantedBy}`);
+        }
+      });
+
+      socket.on('edit_permission_denied', (data) => {
+        showNotification('Edit request denied', 'error');
+        if (data.deniedBy) {
+          addSystemMessage(`Your edit request was denied by ${data.deniedBy}`);
+        }
+      });
+
+      socket.on('edit_permission_revoked', (data) => {
+        isCurrentEditor = false;
+        updateEditButtons();
+        
+        showNotification('Edit permission revoked', 'warning');
+        addSystemMessage(data.message);
+      });
+
+      socket.on('edit_request_sent', (data) => {
+        showNotification('Edit request sent', 'info');
+        addSystemMessage(data.message);
+      });
+
+      socket.on('editor_changed', (data) => {
+        currentEditor = data.newEditor;
+        
+        // Update UI to show who is currently editing
+        if (data.newEditor === userId) {
+          isCurrentEditor = true;
+        } else {
+          isCurrentEditor = false;
+        }
+        
+        updateEditButtons();
+        addSystemMessage(`${data.newEditorName} is now the editor`);
       });
     }
 
@@ -3222,7 +3395,7 @@
           tabIndex: 0,
           selectOnLineNumbers: true,
           roundedSelection: false,
-          readOnly: false,
+          readOnly: !isCurrentEditor, // Set based on edit permission
           cursorStyle: 'line',
           automaticLayout: true,
           // More aggressive suggestion settings for Tab completion
@@ -3232,6 +3405,11 @@
         });
 
         editor.onDidChangeModelContent(() => {
+          // Only allow code changes if user has edit permission
+          if (!isCurrentEditor) {
+            return;
+          }
+          
           isLocalTyping = true;
           if (socket) {
             const position = editor.getPosition();
@@ -3264,6 +3442,19 @@
             });
           }
         });
+
+        // Send periodic cursor updates to ensure sync
+        setInterval(() => {
+          if (socket && editor) {
+            const position = editor.getPosition();
+            socket.emit('cursor_move', {
+              roomId,
+              userId,
+              username,
+              cursorPosition: position
+            });
+          }
+        }, 5000); // Every 5 seconds
 
         // Listen for scroll events to update cursor positions
         editor.onDidScrollChange(() => {
@@ -3303,6 +3494,9 @@
         });
 
         showNotification('Monaco Editor loaded with AI Autocomplete', 'success');
+        
+        // Initialize edit permission buttons after editor is loaded
+        updateEditButtons();
       } catch (e) {
         console.error('Monaco initialization failed:', e);
         monacoContainer.style.display = 'none';
@@ -3352,10 +3546,21 @@
 
     // Update remote cursor
     function updateRemoteCursor(remoteUserId, remoteUsername, position, color) {
-      if (!position) return;
+      if (!position) {
+        console.warn('No position provided for cursor update');
+        return;
+      }
+      if (!editor) {
+        console.warn('Editor not available for cursor update');
+        return;
+      }
+
+      console.log('Updating cursor for:', remoteUsername, 'at position:', position);
 
       // If cursor doesn't exist, create it
       if (!remoteCursors[remoteUserId]) {
+        console.log('Creating new cursor for:', remoteUsername);
+        
         // Create cursor element
         const cursorDiv = document.createElement('div');
         cursorDiv.className = `remote-cursor cursor-${remoteUserId}`;
@@ -3367,39 +3572,34 @@
         const caretDiv = document.createElement('div');
         caretDiv.className = 'cursor-caret';
         caretDiv.style.backgroundColor = color || getRandomColor(remoteUserId);
+        caretDiv.style.width = '2px';
+        caretDiv.style.height = '18px';
 
         // Create cursor label
         const labelDiv = document.createElement('div');
         labelDiv.className = 'cursor-label';
         labelDiv.textContent = remoteUsername;
         labelDiv.style.backgroundColor = color || getRandomColor(remoteUserId);
+        labelDiv.style.color = 'white';
+        labelDiv.style.padding = '2px 6px';
+        labelDiv.style.borderRadius = '4px';
+        labelDiv.style.fontSize = '11px';
+        labelDiv.style.whiteSpace = 'nowrap';
+        labelDiv.style.position = 'absolute';
+        labelDiv.style.transform = 'translateY(-100%)';
+        labelDiv.style.marginTop = '-2px';
 
         // Append elements
         cursorDiv.appendChild(caretDiv);
         cursorDiv.appendChild(labelDiv);
         
-        // Find the best container for the cursor
-        let targetContainer = null;
-        
-        // Try to find Monaco's view lines container (best option)
-        const viewLines = document.querySelector('.monaco-editor .view-lines');
-        if (viewLines) {
-          targetContainer = viewLines;
+        // Find the Monaco editor container
+        const editorContainer = document.querySelector('.monaco-editor');
+        if (editorContainer) {
+          editorContainer.appendChild(cursorDiv);
+          console.log('Cursor appended to Monaco editor container');
         } else {
-          // Fallback to the editor's viewport
-          const viewport = document.querySelector('.monaco-editor .monaco-scrollable-element');
-          if (viewport) {
-            targetContainer = viewport;
-          } else {
-            // Last resort: the main editor container
-            targetContainer = document.querySelector('.monaco-editor-container');
-          }
-        }
-
-        if (targetContainer) {
-          targetContainer.appendChild(cursorDiv);
-        } else {
-          console.warn('Could not find suitable container for remote cursor');
+          console.error('Could not find Monaco editor container');
           return;
         }
 
@@ -3411,60 +3611,73 @@
           lastPosition: position
         };
       } else {
+        console.log('Updating existing cursor for:', remoteUsername);
         // Update existing cursor's position
         remoteCursors[remoteUserId].lastPosition = position;
       }
 
-      // Position the cursor
+      // Position the cursor immediately
       positionCursor(remoteUserId, position);
     }
 
     // Position cursor at specific coordinates
     function positionCursor(userId, position) {
-      if (!remoteCursors[userId] || !position || !editor) return;
+      if (!remoteCursors[userId] || !position || !editor) {
+        console.warn('Cannot position cursor - missing requirements');
+        return;
+      }
 
       const cursor = remoteCursors[userId].element;
       
       try {
         // Ensure position has the correct format
         const cursorPosition = {
-          lineNumber: position.lineNumber || 1,
-          column: position.column || 1
+          lineNumber: Math.max(1, position.lineNumber || 1),
+          column: Math.max(1, position.column || 1)
         };
+
+        console.log('Positioning cursor at:', cursorPosition);
 
         // Get the coordinates of the position in the editor
         const coordinates = editor.getScrolledVisiblePosition(cursorPosition);
+        console.log('Got coordinates:', coordinates);
 
-        if (coordinates && coordinates.left !== undefined && coordinates.top !== undefined) {
-          // Position relative to the editor container
-          cursor.style.left = `${coordinates.left}px`;
-          cursor.style.top = `${coordinates.top}px`;
-          cursor.style.display = 'block';
+        if (coordinates && typeof coordinates.left === 'number' && typeof coordinates.top === 'number') {
+          // Get editor container position
+          const editorContainer = document.querySelector('.monaco-editor');
+          if (editorContainer) {
+            const containerRect = editorContainer.getBoundingClientRect();
+            
+            // Position relative to the editor container
+            cursor.style.left = `${coordinates.left}px`;
+            cursor.style.top = `${coordinates.top}px`;
+            cursor.style.display = 'block';
+            cursor.style.visibility = 'visible';
 
-          // Update caret height to match line height
-          const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight) || 18;
-          const caret = cursor.querySelector('.cursor-caret');
-          if (caret) {
-            caret.style.height = `${lineHeight}px`;
-          }
+            console.log('Cursor positioned at:', cursor.style.left, cursor.style.top);
 
-          // Make sure the label is visible and positioned correctly
-          const label = cursor.querySelector('.cursor-label');
-          if (label) {
-            label.style.transform = 'translateY(-100%)';
-            label.style.visibility = 'visible';
-          }
+            // Update caret height to match line height
+            const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight) || 18;
+            const caret = cursor.querySelector('.cursor-caret');
+            if (caret) {
+              caret.style.height = `${lineHeight}px`;
+            }
 
-          // Add debug logging
-          if (Math.random() < 0.1) { // Only log 10% of the time to avoid spam
-            debugCursorPosition(userId, position);
+            // Make sure the label is visible and positioned correctly
+            const label = cursor.querySelector('.cursor-label');
+            if (label) {
+              label.style.visibility = 'visible';
+            }
+          } else {
+            console.error('Monaco editor container not found');
           }
         } else {
           // Hide cursor if position is not visible in current viewport
+          console.log('Coordinates not available, hiding cursor');
           cursor.style.display = 'none';
         }
       } catch (error) {
-        console.log('Error positioning cursor:', error);
+        console.error('Error positioning cursor:', error);
         cursor.style.display = 'none';
       }
     }
@@ -3501,6 +3714,83 @@
         delete remoteCursors[userId];
       }
     }
+
+    // Edit Permission Functions
+    function updateEditButtons() {
+      const requestEditBtn = document.getElementById('request-edit-btn');
+      const doneEditingBtn = document.getElementById('done-editing-btn');
+      const editorIndicator = document.getElementById('current-editor-indicator');
+      const editorNameSpan = document.getElementById('current-editor-name');
+      
+      if (isCurrentEditor) {
+        requestEditBtn.style.display = 'none';
+        doneEditingBtn.style.display = 'inline-block';
+        
+        // Show editor indicator
+        if (editorIndicator && editorNameSpan) {
+          editorNameSpan.textContent = 'You';
+          editorIndicator.style.display = 'inline-block';
+        }
+      } else if (isOwner) {
+        requestEditBtn.style.display = 'none';
+        doneEditingBtn.style.display = 'none';
+        
+        // Show who is currently editing (if not the owner)
+        if (editorIndicator && editorNameSpan && currentEditor && currentEditor !== userId) {
+          editorNameSpan.textContent = 'Someone';
+          editorIndicator.style.display = 'inline-block';
+        } else if (editorIndicator) {
+          editorIndicator.style.display = 'none';
+        }
+      } else {
+        requestEditBtn.style.display = 'inline-block';
+        doneEditingBtn.style.display = 'none';
+        
+        // Show who is currently editing
+        if (editorIndicator && editorNameSpan && currentEditor) {
+          editorNameSpan.textContent = currentEditor === userId ? 'You' : 'Someone';
+          editorIndicator.style.display = 'inline-block';
+        } else if (editorIndicator) {
+          editorIndicator.style.display = 'none';
+        }
+      }
+      
+      // Update Monaco Editor readonly state
+      if (editor && editor.updateOptions) {
+        editor.updateOptions({ readOnly: !isCurrentEditor });
+      }
+    }
+
+    function requestEditAccess() {
+      if (socket) {
+        socket.emit('request_edit_permission', {
+          roomId: roomId,
+          userId: userId,
+          username: username
+        });
+      }
+    }
+
+    function doneEditing() {
+      if (socket && isCurrentEditor) {
+        socket.emit('release_edit_permission', {
+          roomId: roomId,
+          userId: userId
+        });
+      }
+    }
+
+    // Debug function to manually sync cursors
+    function forceCursorSync() {
+      if (socket) {
+        console.log('Forcing cursor sync...');
+        socket.emit('request_cursor_positions', { roomId });
+      }
+    }
+
+    // Make debug functions available globally for testing
+    window.forceCursorSync = forceCursorSync;
+    window.remoteCursors = remoteCursors;
 
     // Get random color for cursor based on userId
     function getRandomColor(userId) {
@@ -4382,6 +4672,22 @@
         });
       } else {
         console.error('Run code button not found!');
+      }
+
+      // Edit Permission Buttons
+      const requestEditBtn = document.getElementById('request-edit-btn');
+      const doneEditingBtn = document.getElementById('done-editing-btn');
+      
+      if (requestEditBtn) {
+        requestEditBtn.addEventListener('click', function() {
+          requestEditAccess();
+        });
+      }
+      
+      if (doneEditingBtn) {
+        doneEditingBtn.addEventListener('click', function() {
+          doneEditing();
+        });
       }
 
       // Terminal input handling

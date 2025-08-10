@@ -3439,6 +3439,68 @@ app.get("/vercel-debug", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "vercel-debug.html"));
 });
 
+// Edit permission system
+const roomPermissions = new Map(); // roomId -> { owner: userId, currentEditor: userId, editRequests: Set() }
+
+// Initialize room permissions
+function initializeRoomPermissions(roomId, ownerId) {
+  if (!roomPermissions.has(roomId)) {
+    roomPermissions.set(roomId, {
+      owner: ownerId,
+      currentEditor: ownerId, // Owner starts as editor
+      editRequests: new Set()
+    });
+  }
+}
+
+// Check if user has edit permission
+function hasEditPermission(roomId, userId) {
+  const perms = roomPermissions.get(roomId);
+  if (!perms) return false;
+  return perms.currentEditor === userId;
+}
+
+// Get room owner
+function getRoomOwner(roomId) {
+  const perms = roomPermissions.get(roomId);
+  return perms ? perms.owner : null;
+}
+
+// Get current editor
+function getCurrentEditor(roomId) {
+  const perms = roomPermissions.get(roomId);
+  return perms ? perms.currentEditor : null;
+}
+
+// Grant edit permission
+function grantEditPermission(roomId, newEditorId) {
+  const perms = roomPermissions.get(roomId);
+  if (perms) {
+    perms.currentEditor = newEditorId;
+    perms.editRequests.delete(newEditorId);
+    return true;
+  }
+  return false;
+}
+
+// Request edit permission
+function requestEditPermission(roomId, userId) {
+  const perms = roomPermissions.get(roomId);
+  if (perms) {
+    perms.editRequests.add(userId);
+    return true;
+  }
+  return false;
+}
+
+// Remove edit request
+function removeEditRequest(roomId, userId) {
+  const perms = roomPermissions.get(roomId);
+  if (perms) {
+    perms.editRequests.delete(userId);
+  }
+}
+
 // Socket.IO setup for real-time collaboration
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
@@ -3485,6 +3547,15 @@ io.on("connection", (socket) => {
       activeRooms.get(roomId).language = language || "javascript";
       activeRooms.get(roomId).createdAt = new Date().toISOString();
       activeRooms.get(roomId).createdBy = userId;
+      
+      // Initialize room permissions - owner gets edit access
+      initializeRoomPermissions(roomId, userId);
+    } else {
+      // For existing rooms, ensure permissions are initialized
+      if (!roomPermissions.has(roomId)) {
+        const existingRoom = activeRooms.get(roomId);
+        initializeRoomPermissions(roomId, existingRoom.createdBy || userId);
+      }
     }
 
     // Get the users map for this room
@@ -3631,7 +3702,23 @@ io.on("connection", (socket) => {
       language: activeRooms.get(roomId).language,
       timestamp: Date.now(),
       color: userColor,
+      currentEditor: getCurrentEditor(roomId),
+      isOwner: getRoomOwner(roomId) === userId
     });
+
+    // Send current room code to the new user
+    try {
+      const roomCode = await loadRoomCode(roomId);
+      if (roomCode && roomCode.code) {
+        socket.emit("current_code", {
+          code: roomCode.code,
+          language: roomCode.language || 'javascript',
+          lastModified: roomCode.lastModified
+        });
+      }
+    } catch (error) {
+      console.error("Error loading room code for new user:", error);
+    }
 
     console.log(
       `User ${username} (${socket.id}) joined room ${roomId} with ${roomUsers.size} total users`,
@@ -3645,6 +3732,22 @@ io.on("connection", (socket) => {
     // Validate data
     if (!roomId || !userId || typeof code !== "string") {
       console.log(`Invalid code data from ${username || userId}`);
+      return;
+    }
+
+    // Check edit permission
+    const roomData = activeRooms.get(roomId);
+    if (!roomData) {
+      socket.emit("edit_denied", { message: "Room not found" });
+      return;
+    }
+
+    // Check if user has permission to edit
+    if (!hasEditPermission(roomId, userId)) {
+      socket.emit("edit_denied", { 
+        message: "You don't have permission to edit this file",
+        currentEditor: roomData.currentEditor
+      });
       return;
     }
 
@@ -3780,6 +3883,179 @@ io.on("connection", (socket) => {
       picture,
       message: sanitizedMessage,
       timestamp: timestamp || Date.now(),
+    });
+  });
+
+  // Handle edit permission requests
+  socket.on("request_edit_permission", (data) => {
+    const { roomId, userId, username } = data;
+    
+    if (!roomId || !userId) {
+      return;
+    }
+
+    const currentEditor = getCurrentEditor(roomId);
+    const roomOwner = getRoomOwner(roomId);
+    
+    if (!currentEditor) {
+      socket.emit("edit_denied", { message: "Room not found" });
+      return;
+    }
+
+    // If requesting user is already the editor, no need to request
+    if (currentEditor === userId) {
+      socket.emit("edit_permission_granted", { 
+        message: "You already have edit permission",
+        isEditor: true 
+      });
+      return;
+    }
+
+    // Add to edit requests
+    requestEditPermission(roomId, userId);
+
+    // Get the socket of current editor to send the permission request
+    const roomUsers = activeRooms.get(roomId);
+    if (roomUsers) {
+      for (const [socketId, userData] of roomUsers.entries()) {
+        if (userData.userId === currentEditor) {
+          // Send request to current editor
+          io.to(socketId).emit("edit_permission_requested", {
+            fromUserId: userId,
+            fromUsername: username,
+            roomId: roomId
+          });
+          break;
+        }
+      }
+    }
+
+    // Notify the requester that request was sent
+    socket.emit("edit_request_sent", {
+      message: `Edit request sent to ${currentEditor === roomOwner ? 'room owner' : 'current editor'}`,
+      currentEditor: currentEditor
+    });
+  });
+
+  // Handle edit permission responses
+  socket.on("respond_edit_permission", (data) => {
+    const { roomId, userId, grantedUserId, granted, username } = data;
+    
+    if (!roomId || !userId || !grantedUserId) {
+      return;
+    }
+
+    const currentEditor = getCurrentEditor(roomId);
+    
+    // Only current editor can grant permissions
+    if (currentEditor !== userId) {
+      socket.emit("permission_denied", { message: "You don't have permission to grant edit access" });
+      return;
+    }
+
+    const roomUsers = activeRooms.get(roomId);
+    if (!roomUsers) {
+      return;
+    }
+
+    // Find the user who requested permission
+    let targetSocketId = null;
+    let targetUsername = null;
+    for (const [socketId, userData] of roomUsers.entries()) {
+      if (userData.userId === grantedUserId) {
+        targetSocketId = socketId;
+        targetUsername = userData.username;
+        break;
+      }
+    }
+
+    if (granted && targetSocketId) {
+      // Grant permission
+      grantEditPermission(roomId, grantedUserId);
+      
+      // Notify the granted user
+      io.to(targetSocketId).emit("edit_permission_granted", {
+        message: "You have been granted edit permission",
+        grantedBy: username,
+        isEditor: true
+      });
+
+      // Notify all users about the editor change
+      io.to(roomId).emit("editor_changed", {
+        newEditor: grantedUserId,
+        newEditorName: targetUsername,
+        previousEditor: userId,
+        previousEditorName: username
+      });
+
+      // Notify the previous editor they lost permission
+      socket.emit("edit_permission_revoked", {
+        message: "You have granted edit permission to " + targetUsername,
+        newEditor: grantedUserId
+      });
+
+    } else if (targetSocketId) {
+      // Deny permission
+      removeEditRequest(roomId, grantedUserId);
+      io.to(targetSocketId).emit("edit_permission_denied", {
+        message: "Your edit request was denied",
+        deniedBy: username
+      });
+    }
+  });
+
+  // Handle voluntary edit permission release
+  socket.on("release_edit_permission", (data) => {
+    const { roomId, userId } = data;
+    
+    if (!roomId || !userId) {
+      return;
+    }
+
+    const currentEditor = getCurrentEditor(roomId);
+    const roomOwner = getRoomOwner(roomId);
+    
+    // Only current editor can release permission
+    if (currentEditor !== userId) {
+      return;
+    }
+
+    // Release permission back to owner
+    grantEditPermission(roomId, roomOwner);
+
+    const roomUsers = activeRooms.get(roomId);
+    if (roomUsers) {
+      let ownerSocketId = null;
+      let ownerName = null;
+      for (const [socketId, userData] of roomUsers.entries()) {
+        if (userData.userId === roomOwner) {
+          ownerSocketId = socketId;
+          ownerName = userData.username;
+          break;
+        }
+      }
+
+      if (ownerSocketId) {
+        // Notify owner they got permission back
+        io.to(ownerSocketId).emit("edit_permission_granted", {
+          message: "Edit permission has been returned to you",
+          isEditor: true
+        });
+
+        // Notify all users about the editor change
+        io.to(roomId).emit("editor_changed", {
+          newEditor: roomOwner,
+          newEditorName: ownerName,
+          previousEditor: userId,
+          previousEditorName: roomUsers.get(socket.id)?.username || 'Unknown'
+        });
+      }
+    }
+
+    // Notify the user who released permission
+    socket.emit("edit_permission_revoked", {
+      message: "You have released edit permission",
+      newEditor: roomOwner
     });
   });
 
@@ -4080,6 +4356,36 @@ io.on("connection", (socket) => {
         }
 
         if (!hasOtherSockets) {
+          // Handle edit permission cleanup
+          const currentEditor = getCurrentEditor(roomId);
+          const roomOwner = getRoomOwner(roomId);
+          
+          if (currentEditor === userId && roomOwner !== userId) {
+            // Current editor left but is not owner - return permission to owner
+            grantEditPermission(roomId, roomOwner);
+            
+            // Notify owner they got permission back
+            const ownerSocket = findUserSocket(roomId, roomOwner);
+            if (ownerSocket) {
+              io.to(ownerSocket).emit("edit_permission_granted", {
+                message: "Edit permission returned to you (previous editor left)",
+                isEditor: true
+              });
+
+              // Notify all users about the editor change
+              io.to(roomId).emit("editor_changed", {
+                newEditor: roomOwner,
+                newEditorName: findUserName(roomId, roomOwner) || 'Owner',
+                previousEditor: userId,
+                previousEditorName: username,
+                reason: "Previous editor left the room"
+              });
+            }
+          }
+
+          // Remove any pending edit requests from this user
+          removeEditRequest(roomId, userId);
+
           // End coding session for this user
           if (userId && userId.includes('@')) {
             try {
@@ -4089,9 +4395,10 @@ io.on("connection", (socket) => {
             }
           }
 
-          // If the room is empty, remove it
+          // If the room is empty, remove it and cleanup permissions
           if (users.size === 0) {
             activeRooms.delete(roomId);
+            roomPermissions.delete(roomId);
           } else {
             // Notify others that the user left
             io.to(roomId).emit("user_left", {
@@ -4099,6 +4406,7 @@ io.on("connection", (socket) => {
               username,
               userCount: users.size,
               timestamp: Date.now(),
+              currentEditor: getCurrentEditor(roomId)
             });
           }
         }
@@ -4107,6 +4415,51 @@ io.on("connection", (socket) => {
       }
     }
   });
+
+  // Handle request for current code
+  socket.on("request_current_code", async (data) => {
+    const { roomId } = data;
+    
+    try {
+      const roomCode = await loadRoomCode(roomId);
+      if (roomCode) {
+        socket.emit("current_code", {
+          code: roomCode.code || '',
+          language: roomCode.language || 'javascript',
+          lastModified: roomCode.lastModified
+        });
+      }
+    } catch (error) {
+      console.error("Error loading room code:", error);
+      socket.emit("current_code", { code: '', language: 'javascript' });
+    }
+  });
+
+  // Helper function to find user's socket ID
+  function findUserSocket(roomId, userId) {
+    const roomUsers = activeRooms.get(roomId);
+    if (!roomUsers) return null;
+    
+    for (const [socketId, userData] of roomUsers.entries()) {
+      if (userData.userId === userId) {
+        return socketId;
+      }
+    }
+    return null;
+  }
+
+  // Helper function to find user's name
+  function findUserName(roomId, userId) {
+    const roomUsers = activeRooms.get(roomId);
+    if (!roomUsers) return null;
+    
+    for (const [socketId, userData] of roomUsers.entries()) {
+      if (userData.userId === userId) {
+        return userData.username;
+      }
+    }
+    return null;
+  }
 });
 
 // Process bash commands sequentially to prevent overload
