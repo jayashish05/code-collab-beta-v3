@@ -2,7 +2,8 @@
 
 CodeCollab is an interactive, real-time collaborative coding platform that enables multiple users to code together simultaneously, chat, and share ideas in a seamless environment with AI Intergration.
 
-![CodeCollab Screenshot]
+Screenshots:
+
 <img width="1470" height="956" alt="Screenshot 2025-08-11 at 2 44 18 AM" src="https://github.com/user-attachments/assets/0a8cf901-161b-4793-8ec3-3dd7105590c9" />
 
 <img width="1470" height="956" alt="Screenshot 2025-08-11 at 2 44 30 AM" src="https://github.com/user-attachments/assets/c8e47a11-161c-469f-aefa-0b30ec7b5ef6" />
@@ -42,6 +43,8 @@ CodeCollab is an interactive, real-time collaborative coding platform that enabl
 - **Authentication**: Passport.js (Google OAuth, Local)
 - **Payment Processing**: Razorpay
 - **AI Integration**: Google Gemini AI
+
+## Try it out here just by clicking this link: https://code-collab-beta-v3.onrender.com
 
 ## Getting Started
 
