@@ -1,5 +1,5 @@
 import express from "express";
-import { collection, Room, safeDBOperation, ensureDBConnection, connectDB, trackUserActivity, startCodingSession, updateCodingSession, endCodingSession, trackCodeExecution, saveRoomCode, loadRoomCode, saveRoomFile, autoSaveRoomData } from "./config.js";
+import { collection, Room, VoiceChat, safeDBOperation, ensureDBConnection, connectDB, trackUserActivity, startCodingSession, updateCodingSession, endCodingSession, trackCodeExecution, saveRoomCode, loadRoomCode, saveRoomFile, autoSaveRoomData } from "./config.js";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -4386,6 +4386,28 @@ io.on("connection", (socket) => {
           // Remove any pending edit requests from this user
           removeEditRequest(roomId, userId);
 
+          // Clean up voice chat participation
+          try {
+            await safeDBOperation(async () => {
+              await VoiceChat.updateOne(
+                { roomId: roomId },
+                {
+                  $pull: { participants: { socketId: socket.id } },
+                  $set: { lastActivity: new Date() }
+                }
+              );
+            });
+
+            // Notify remaining voice chat participants
+            socket.to(`voice_${roomId}`).emit("voice_user_left", {
+              userId: userId,
+              username: username,
+              timestamp: Date.now()
+            });
+          } catch (error) {
+            console.error("Error cleaning up voice chat on disconnect:", error);
+          }
+
           // End coding session for this user
           if (userId && userId.includes('@')) {
             try {
@@ -4460,6 +4482,289 @@ io.on("connection", (socket) => {
     }
     return null;
   }
+
+  // ============== VOICE CHAT SIGNALING EVENTS ==============
+
+  // Handle joining voice chat
+  socket.on("join_voice_chat", async (data) => {
+    const { roomId, userId, username } = data;
+
+    if (!roomId || !userId || !username) {
+      return;
+    }
+
+    console.log(`User ${username} attempting to join voice chat in room ${roomId}`);
+
+    try {
+      // Find or create voice chat room
+      let voiceRoom = await safeDBOperation(async () => {
+        return await VoiceChat.findOne({ roomId: roomId });
+      });
+
+      if (!voiceRoom) {
+        // Create new voice chat room
+        voiceRoom = await safeDBOperation(async () => {
+          const newVoiceRoom = new VoiceChat({
+            roomId: roomId,
+            participants: []
+          });
+          return await newVoiceRoom.save();
+        });
+      }
+
+      // Check if user is already in voice chat
+      const existingParticipant = voiceRoom.participants.find(p => p.userId === userId);
+
+      if (!existingParticipant) {
+        // Add user to voice chat
+        await safeDBOperation(async () => {
+          await VoiceChat.updateOne(
+            { roomId: roomId },
+            {
+              $push: {
+                participants: {
+                  userId: userId,
+                  username: username,
+                  socketId: socket.id,
+                  isMuted: false,
+                  isDeafened: false,
+                  joinedAt: new Date()
+                }
+              },
+              $set: { lastActivity: new Date() }
+            }
+          );
+        });
+      } else {
+        // Update existing participant's socket ID
+        await safeDBOperation(async () => {
+          await VoiceChat.updateOne(
+            { roomId: roomId, "participants.userId": userId },
+            {
+              $set: {
+                "participants.$.socketId": socket.id,
+                "participants.$.isMuted": false,
+                "participants.$.isDeafened": false,
+                lastActivity: new Date()
+              }
+            }
+          );
+        });
+      }
+
+      // Join voice chat socket room
+      socket.join(`voice_${roomId}`);
+
+      // Get updated participant list
+      const updatedVoiceRoom = await safeDBOperation(async () => {
+        return await VoiceChat.findOne({ roomId: roomId });
+      });
+
+      // Notify all participants about the new user
+      io.to(`voice_${roomId}`).emit("voice_user_joined", {
+        userId: userId,
+        username: username,
+        participants: updatedVoiceRoom.participants.map(p => ({
+          userId: p.userId,
+          username: p.username,
+          isMuted: p.isMuted,
+          isDeafened: p.isDeafened
+        })),
+        timestamp: Date.now()
+      });
+
+      // Notify the joining user of success
+      socket.emit("voice_join_success", {
+        roomId: roomId,
+        participants: updatedVoiceRoom.participants.map(p => ({
+          userId: p.userId,
+          username: p.username,
+          isMuted: p.isMuted,
+          isDeafened: p.isDeafened
+        }))
+      });
+
+    } catch (error) {
+      console.error("Error joining voice chat:", error);
+      socket.emit("voice_join_error", { message: "Failed to join voice chat" });
+    }
+  });
+
+  // Handle leaving voice chat
+  socket.on("leave_voice_chat", async (data) => {
+    const { roomId, userId, username } = data;
+
+    if (!roomId || !userId) {
+      return;
+    }
+
+    console.log(`User ${username || userId} leaving voice chat in room ${roomId}`);
+
+    try {
+      // Remove user from voice chat
+      await safeDBOperation(async () => {
+        await VoiceChat.updateOne(
+          { roomId: roomId },
+          {
+            $pull: { participants: { userId: userId } },
+            $set: { lastActivity: new Date() }
+          }
+        );
+      });
+
+      // Leave voice chat socket room
+      socket.leave(`voice_${roomId}`);
+
+      // Get updated participant list
+      const updatedVoiceRoom = await safeDBOperation(async () => {
+        return await VoiceChat.findOne({ roomId: roomId });
+      });
+
+      // Notify remaining participants
+      if (updatedVoiceRoom && updatedVoiceRoom.participants.length > 0) {
+        socket.to(`voice_${roomId}`).emit("voice_user_left", {
+          userId: userId,
+          username: username,
+          participants: updatedVoiceRoom.participants.map(p => ({
+            userId: p.userId,
+            username: p.username,
+            isMuted: p.isMuted,
+            isDeafened: p.isDeafened
+          })),
+          timestamp: Date.now()
+        });
+      } else {
+        // If no participants left, clean up the voice room
+        await safeDBOperation(async () => {
+          await VoiceChat.deleteOne({ roomId: roomId });
+        });
+      }
+
+      // Confirm leave to the user
+      socket.emit("voice_leave_success", { roomId: roomId });
+
+    } catch (error) {
+      console.error("Error leaving voice chat:", error);
+    }
+  });
+
+  // Handle WebRTC offer
+  socket.on("webrtc_offer", (data) => {
+    const { roomId, offer, targetUserId, fromUserId } = data;
+
+    if (!roomId || !offer || !targetUserId || !fromUserId) {
+      return;
+    }
+
+    // Forward offer to target user in the same voice chat room
+    socket.to(`voice_${roomId}`).emit("webrtc_offer_received", {
+      offer: offer,
+      fromUserId: fromUserId,
+      targetUserId: targetUserId
+    });
+  });
+
+  // Handle WebRTC answer
+  socket.on("webrtc_answer", (data) => {
+    const { roomId, answer, targetUserId, fromUserId } = data;
+
+    if (!roomId || !answer || !targetUserId || !fromUserId) {
+      return;
+    }
+
+    // Forward answer to target user in the same voice chat room
+    socket.to(`voice_${roomId}`).emit("webrtc_answer_received", {
+      answer: answer,
+      fromUserId: fromUserId,
+      targetUserId: targetUserId
+    });
+  });
+
+  // Handle ICE candidate
+  socket.on("webrtc_ice_candidate", (data) => {
+    const { roomId, candidate, targetUserId, fromUserId } = data;
+
+    if (!roomId || !candidate || !targetUserId || !fromUserId) {
+      return;
+    }
+
+    // Forward ICE candidate to target user in the same voice chat room
+    socket.to(`voice_${roomId}`).emit("webrtc_ice_candidate_received", {
+      candidate: candidate,
+      fromUserId: fromUserId,
+      targetUserId: targetUserId
+    });
+  });
+
+  // Handle mute toggle
+  socket.on("voice_mute_toggle", async (data) => {
+    const { roomId, userId, isMuted } = data;
+
+    if (!roomId || !userId || typeof isMuted !== 'boolean') {
+      return;
+    }
+
+    try {
+      // Update mute status in database
+      await safeDBOperation(async () => {
+        await VoiceChat.updateOne(
+          { roomId: roomId, "participants.userId": userId },
+          {
+            $set: {
+              "participants.$.isMuted": isMuted,
+              lastActivity: new Date()
+            }
+          }
+        );
+      });
+
+      // Broadcast mute status to other participants
+      socket.to(`voice_${roomId}`).emit("voice_user_muted", {
+        userId: userId,
+        isMuted: isMuted,
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      console.error("Error toggling mute status:", error);
+    }
+  });
+
+  // Handle deafen toggle
+  socket.on("voice_deafen_toggle", async (data) => {
+    const { roomId, userId, isDeafened } = data;
+
+    if (!roomId || !userId || typeof isDeafened !== 'boolean') {
+      return;
+    }
+
+    try {
+      // Update deafen status in database
+      await safeDBOperation(async () => {
+        await VoiceChat.updateOne(
+          { roomId: roomId, "participants.userId": userId },
+          {
+            $set: {
+              "participants.$.isDeafened": isDeafened,
+              lastActivity: new Date()
+            }
+          }
+        );
+      });
+
+      // Broadcast deafen status to other participants
+      socket.to(`voice_${roomId}`).emit("voice_user_deafened", {
+        userId: userId,
+        isDeafened: isDeafened,
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      console.error("Error toggling deafen status:", error);
+    }
+  });
+
+  // ============== END VOICE CHAT SIGNALING EVENTS ==============
 });
 
 // Process bash commands sequentially to prevent overload

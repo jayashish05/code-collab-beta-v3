@@ -1,8 +1,16 @@
 # CodeCollab - Real-time Collaborative Coding Platform
 
-CodeCollab is an interactive, real-time collaborative coding platform that enables multiple users to code together simultaneously, chat, and share ideas in a seamless environment.
+CodeCollab is an interactive, real-time collaborative coding platform that enables multiple users to code together simultaneously, chat, and share ideas in a seamless environment with AI Intergration.
 
-![CodeCollab Screenshot](https://i.imgur.com/1234567.png)
+Screenshots:
+
+<img width="1470" height="956" alt="Screenshot 2025-08-11 at 2 44 18 AM" src="https://github.com/user-attachments/assets/0a8cf901-161b-4793-8ec3-3dd7105590c9" />
+
+<img width="1470" height="956" alt="Screenshot 2025-08-11 at 2 44 30 AM" src="https://github.com/user-attachments/assets/c8e47a11-161c-469f-aefa-0b30ec7b5ef6" />
+
+<img width="1470" height="956" alt="Screenshot 2025-08-11 at 2 44 34 AM" src="https://github.com/user-attachments/assets/0ff1c8bd-13fb-4b7e-8566-52aaf713ae68" />
+
+<img width="1470" height="956" alt="Screenshot 2025-08-11 at 2 44 43 AM" src="https://github.com/user-attachments/assets/a3d69b8e-2bf0-4810-b93b-1c2b71b11da5" />
 
 ## Features
 
@@ -31,10 +39,12 @@ CodeCollab is an interactive, real-time collaborative coding platform that enabl
 - **Backend**: Node.js, Express.js
 - **Database**: MongoDB with Mongoose
 - **Real-time Communication**: Socket.IO
-- **Code Editor**: CodeMirror
+- **Code Editor**: Monaco Editor
 - **Authentication**: Passport.js (Google OAuth, Local)
 - **Payment Processing**: Razorpay
 - **AI Integration**: Google Gemini AI
+
+## Try it out here just by clicking this link: https://code-collab-beta-v3.onrender.com
 
 ## Getting Started
 

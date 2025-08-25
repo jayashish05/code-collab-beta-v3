@@ -335,6 +335,82 @@
       color: #333;
     }
 
+    /* Voice Chat Button States */
+    .footer-btn.voice-connected {
+      background: #28a745 !important;
+      color: white !important;
+    }
+
+    .footer-btn.voice-muted {
+      background: #dc3545 !important;
+      color: white !important;
+    }
+
+    .footer-btn.voice-deafened {
+      background: #ffc107 !important;
+      color: #212529 !important;
+    }
+
+    body:not(.dark-mode) .footer-btn.voice-connected:hover,
+    body:not(.dark-mode) .footer-btn.voice-muted:hover,
+    body:not(.dark-mode) .footer-btn.voice-deafened:hover {
+      opacity: 0.8 !important;
+    }
+
+    /* Voice Chat Participants Indicator */
+    #voice-participants-indicator {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #28a745;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Voice Chat Button States */
+    .footer-btn.voice-connected {
+      background: #28a745;
+      color: white;
+    }
+
+    .footer-btn.voice-muted {
+      background: #dc3545;
+      color: white;
+    }
+
+    .footer-btn.voice-deafened {
+      background: #ffc107;
+      color: #212529;
+    }
+
+    body:not(.dark-mode) .footer-btn.voice-connected:hover,
+    body:not(.dark-mode) .footer-btn.voice-muted:hover,
+    body:not(.dark-mode) .footer-btn.voice-deafened:hover {
+      opacity: 0.8;
+    }
+
+    /* Voice Chat Participants Indicator */
+    #voice-participants-indicator {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #28a745;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 11px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
     /* Slide-in Chat Panel (VS Code style) */
     .chat-sidebar {
       position: fixed;
@@ -2143,6 +2219,24 @@
         <span><i class="fas fa-code"></i> <%= roomData.language %></span>
       </div>
       <div class="footer-right">
+        <!-- Voice Chat Controls -->
+        <button class="footer-btn" id="join-voice-btn" title="Join Voice Chat" style="position: relative;">
+          <i class="fas fa-microphone"></i>
+          Join Voice
+          <span id="voice-participants-indicator">0</span>
+        </button>
+        <button class="footer-btn" id="mute-btn" style="display: none;" title="Toggle Microphone">
+          <i class="fas fa-microphone"></i>
+        </button>
+        <button class="footer-btn" id="deafen-btn" style="display: none;" title="Toggle Audio (Deafen)">
+          <i class="fas fa-volume-up"></i>
+        </button>
+        <button class="footer-btn" id="leave-voice-btn" style="display: none;" title="Leave Voice Chat">
+          <i class="fas fa-door-open"></i>
+          Leave Call
+        </button>
+        
+        <!-- Existing buttons -->
         <button class="footer-btn" id="footer-chat-btn">
           <i class="fas fa-comments"></i>
           Chat
@@ -2937,6 +3031,585 @@
         addSystemMessage(`${data.newEditorName} is now the editor`);
       });
     }
+
+    // ============== WEBRTC VOICE CHAT FUNCTIONALITY ==============
+    
+    // Voice chat state variables
+    let isInVoiceChat = false;
+    let isMuted = false;
+    let isDeafened = false;
+    let localAudioStream = null;
+    let peerConnections = new Map(); // Map of userId -> RTCPeerConnection
+    let remoteAudioStreams = new Map(); // Map of userId -> MediaStream
+    
+    // WebRTC configuration
+    const rtcConfiguration = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" }
+      ]
+    };
+
+    // Voice chat UI elements
+    const joinVoiceBtn = document.getElementById('join-voice-btn');
+    const muteBtn = document.getElementById('mute-btn');
+    const deafenBtn = document.getElementById('deafen-btn');
+    const leaveVoiceBtn = document.getElementById('leave-voice-btn');
+    const voiceIndicator = document.getElementById('voice-participants-indicator');
+
+    // Add event listeners for voice chat buttons
+    function setupVoiceChatEventListeners() {
+      if (joinVoiceBtn) {
+        joinVoiceBtn.addEventListener('click', joinVoiceChat);
+      }
+      
+      if (muteBtn) {
+        muteBtn.addEventListener('click', toggleMute);
+      }
+      
+      if (deafenBtn) {
+        deafenBtn.addEventListener('click', toggleDeafen);
+      }
+      
+      if (leaveVoiceBtn) {
+        leaveVoiceBtn.addEventListener('click', leaveVoiceChat);
+      }
+    }
+
+    // Initialize voice chat socket event listeners
+    function initializeVoiceChatSocket() {
+      if (!socket) {
+        console.error('Socket not initialized');
+        return;
+      }
+
+      // Voice user joined
+      socket.on('voice_user_joined', (data) => {
+        console.log('Voice user joined:', data);
+        updateVoiceParticipantsUI(data.participants);
+        
+        // If we're already in voice chat, establish peer connection
+        if (isInVoiceChat && data.userId !== userId) {
+          console.log('Initiating peer connection to new user:', data.userId);
+          setTimeout(() => createPeerConnection(data.userId), 1000);
+        }
+      });
+
+      // Voice user left
+      socket.on('voice_user_left', (data) => {
+        console.log('Voice user left:', data);
+        updateVoiceParticipantsUI(data.participants);
+        
+        // Clean up peer connection
+        if (peerConnections.has(data.userId)) {
+          console.log('Closing peer connection for user:', data.userId);
+          peerConnections.get(data.userId).close();
+          peerConnections.delete(data.userId);
+        }
+        
+        // Remove remote audio element
+        const audioId = `remote-audio-${data.userId}`;
+        const audio = document.getElementById(audioId);
+        if (audio) {
+          audio.srcObject = null;
+          audio.remove();
+          console.log('Removed audio element for user:', data.userId);
+        }
+        
+        if (remoteAudioStreams.has(data.userId)) {
+          remoteAudioStreams.delete(data.userId);
+        }
+      });
+
+      // Voice join success
+      socket.on('voice_join_success', (data) => {
+        console.log('Voice join success:', data);
+        isInVoiceChat = true;
+        updateVoiceChatUI();
+        updateVoiceParticipantsUI(data.participants);
+        
+        // Create peer connections for existing participants (excluding self)
+        const otherParticipants = data.participants.filter(p => p.userId !== userId);
+        console.log('Other participants to connect to:', otherParticipants);
+        
+        otherParticipants.forEach((participant, index) => {
+          // Stagger the connections to avoid race conditions
+          setTimeout(() => {
+            console.log('Creating peer connection to existing participant:', participant.userId);
+            createPeerConnection(participant.userId);
+          }, (index + 1) * 1500);
+        });
+      });
+
+      // Voice join error
+      socket.on('voice_join_error', (data) => {
+        console.error('Voice join error:', data.message);
+        showNotification('Failed to join voice chat: ' + data.message, 'error');
+      });
+
+      // Voice leave success
+      socket.on('voice_leave_success', (data) => {
+        console.log('Voice leave success');
+        cleanupVoiceChat();
+      });
+
+      // User muted/unmuted
+      socket.on('voice_user_muted', (data) => {
+        console.log('User muted status:', data);
+        // Update UI to show user's mute status if needed
+      });
+
+      // User deafened/undeafened
+      socket.on('voice_user_deafened', (data) => {
+        console.log('User deafened status:', data);
+        // Update UI to show user's deafen status if needed
+      });
+
+      // WebRTC signaling events
+      socket.on('webrtc_offer_received', async (data) => {
+        console.log('Received WebRTC offer from:', data.fromUserId);
+        console.log('Offer data:', data.offer);
+        await handleOffer(data.fromUserId, data.offer);
+      });
+
+      socket.on('webrtc_answer_received', async (data) => {
+        console.log('Received WebRTC answer from:', data.fromUserId);
+        console.log('Answer data:', data.answer);
+        await handleAnswer(data.fromUserId, data.answer);
+      });
+
+      socket.on('webrtc_ice_candidate_received', async (data) => {
+        console.log('Received ICE candidate from:', data.fromUserId);
+        console.log('ICE candidate data:', data.candidate);
+        await handleIceCandidate(data.fromUserId, data.candidate);
+      });
+    }
+
+    // Join voice chat function
+    async function joinVoiceChat() {
+      try {
+        console.log('Requesting microphone access...');
+        
+        // Request microphone access
+        localAudioStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        
+        console.log('Microphone access granted');
+        
+        // Join voice chat room via socket
+        socket.emit('join_voice_chat', {
+          roomId: roomId,
+          userId: userId,
+          username: username
+        });
+        
+        showNotification('Joining voice chat...', 'info');
+        
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+        showNotification('Failed to access microphone. Please check permissions.', 'error');
+      }
+    }
+
+    // Leave voice chat function
+    function leaveVoiceChat() {
+      console.log('Leaving voice chat...');
+      
+      // Notify server
+      socket.emit('leave_voice_chat', {
+        roomId: roomId,
+        userId: userId,
+        username: username
+      });
+      
+      cleanupVoiceChat();
+      showNotification('Left voice chat', 'info');
+    }
+
+    // Cleanup voice chat resources
+    function cleanupVoiceChat() {
+      isInVoiceChat = false;
+      isMuted = false;
+      isDeafened = false;
+      
+      // Stop local audio stream
+      if (localAudioStream) {
+        localAudioStream.getTracks().forEach(track => track.stop());
+        localAudioStream = null;
+      }
+      
+      // Remove remote audio elements
+      remoteAudioStreams.forEach((stream, userId) => {
+        const audioId = `remote-audio-${userId}`;
+        const audio = document.getElementById(audioId);
+        if (audio) {
+          audio.srcObject = null;
+          audio.remove();
+        }
+      });
+      
+      // Close all peer connections
+      peerConnections.forEach(pc => pc.close());
+      peerConnections.clear();
+      remoteAudioStreams.clear();
+      
+      // Update UI
+      updateVoiceChatUI();
+      updateVoiceParticipantsUI([]);
+    }
+
+    // Toggle mute function
+    function toggleMute() {
+      if (!localAudioStream) return;
+      
+      isMuted = !isMuted;
+      
+      // Toggle audio track
+      localAudioStream.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted;
+      });
+      
+      // Update UI
+      updateVoiceChatUI();
+      
+      // Notify other participants
+      socket.emit('voice_mute_toggle', {
+        roomId: roomId,
+        userId: userId,
+        isMuted: isMuted
+      });
+      
+      showNotification(isMuted ? 'Microphone muted' : 'Microphone unmuted', 'info');
+    }
+
+    // Toggle deafen function
+    function toggleDeafen() {
+      isDeafened = !isDeafened;
+      
+      // Update volume for all remote audio elements
+      remoteAudioStreams.forEach((stream, userId) => {
+        const audioId = `remote-audio-${userId}`;
+        const audio = document.getElementById(audioId);
+        if (audio) {
+          audio.volume = isDeafened ? 0 : 1;
+          audio.muted = isDeafened;
+        }
+      });
+      
+      // Update UI
+      updateVoiceChatUI();
+      
+      // Notify other participants
+      socket.emit('voice_deafen_toggle', {
+        roomId: roomId,
+        userId: userId,
+        isDeafened: isDeafened
+      });
+      
+      showNotification(isDeafened ? 'Audio deafened' : 'Audio enabled', 'info');
+    }
+
+    // Create peer connection for a user
+    async function createPeerConnection(targetUserId) {
+      if (peerConnections.has(targetUserId)) {
+        console.log('Peer connection already exists for:', targetUserId);
+        return peerConnections.get(targetUserId);
+      }
+      
+      console.log('Creating peer connection for:', targetUserId);
+      
+      const pc = new RTCPeerConnection(rtcConfiguration);
+      peerConnections.set(targetUserId, pc);
+      
+      // Add local stream first
+      if (localAudioStream) {
+        console.log('Adding local audio tracks to peer connection for:', targetUserId);
+        localAudioStream.getTracks().forEach(track => {
+          pc.addTrack(track, localAudioStream);
+          console.log('Added track:', track.kind);
+        });
+      } else {
+        console.error('No local audio stream available for peer connection');
+        return;
+      }
+      
+      // Handle remote stream
+      pc.ontrack = (event) => {
+        console.log('Received remote track from:', targetUserId);
+        
+        const [remoteStream] = event.streams;
+        remoteAudioStreams.set(targetUserId, remoteStream);
+        
+        // Create audio element to play remote stream
+        const audioId = `remote-audio-${targetUserId}`;
+        let audio = document.getElementById(audioId);
+        
+        if (!audio) {
+          audio = document.createElement('audio');
+          audio.id = audioId;
+          audio.autoplay = true;
+          audio.controls = false;
+          audio.style.display = 'none';
+          audio.playsInline = true;
+          document.body.appendChild(audio);
+        }
+        
+        audio.srcObject = remoteStream;
+        audio.volume = isDeafened ? 0 : 1;
+        
+        // Ensure audio plays
+        audio.play().then(() => {
+          console.log('Remote audio playing for:', targetUserId);
+        }).catch(e => {
+          console.log('Auto-play prevented, user interaction required:', e);
+          
+          // Show a notification to user that they need to interact to enable audio
+          showNotification('Click anywhere to enable voice chat audio', 'warning');
+          
+          // Add click handler to enable audio
+          const enableAudio = () => {
+            audio.play().then(() => {
+              console.log('Remote audio enabled for user:', targetUserId);
+              document.removeEventListener('click', enableAudio);
+            }).catch(console.error);
+          };
+          document.addEventListener('click', enableAudio, { once: true });
+        });
+        
+        console.log('Remote audio stream set up for user:', targetUserId);
+      };
+      
+      // Handle ICE candidates
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('Sending ICE candidate to:', targetUserId);
+          socket.emit('webrtc_ice_candidate', {
+            roomId: roomId,
+            targetUserId: targetUserId,
+            fromUserId: userId,
+            candidate: event.candidate
+          });
+        } else {
+          console.log('All ICE candidates have been sent to:', targetUserId);
+        }
+      };
+
+      // Handle connection state changes
+      pc.onconnectionstatechange = () => {
+        console.log('Connection state change for', targetUserId, ':', pc.connectionState);
+        if (pc.connectionState === 'connected') {
+          console.log('✅ Successfully connected to:', targetUserId);
+        } else if (pc.connectionState === 'failed') {
+          console.log('❌ Connection failed to:', targetUserId);
+        }
+      };
+      
+      // Create and send offer after a small delay to ensure everything is set up
+      try {
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+        
+        console.log('Creating offer for:', targetUserId);
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: false
+        });
+        
+        await pc.setLocalDescription(offer);
+        console.log('Set local description, sending offer to:', targetUserId);
+        
+        socket.emit('webrtc_offer', {
+          roomId: roomId,
+          targetUserId: targetUserId,
+          fromUserId: userId,
+          offer: offer
+        });
+        
+      } catch (error) {
+        console.error('Error creating/sending offer:', error);
+      }
+      
+      return pc;
+    }
+
+    // Handle received offer
+    async function handleOffer(fromUserId, offer) {
+      try {
+        console.log('Handling offer from:', fromUserId);
+        
+        let pc = peerConnections.get(fromUserId);
+        if (!pc) {
+          console.log('Creating new peer connection for incoming offer from:', fromUserId);
+          pc = new RTCPeerConnection(rtcConfiguration);
+          peerConnections.set(fromUserId, pc);
+          
+          // Add local stream
+          if (localAudioStream) {
+            console.log('Adding local audio tracks to new peer connection for:', fromUserId);
+            localAudioStream.getTracks().forEach(track => {
+              pc.addTrack(track, localAudioStream);
+              console.log('Added track:', track.kind);
+            });
+          } else {
+            console.error('No local audio stream available for incoming offer');
+          }
+          
+          // Handle remote stream
+          pc.ontrack = (event) => {
+            console.log('Received remote track from:', fromUserId);
+            const [remoteStream] = event.streams;
+            remoteAudioStreams.set(fromUserId, remoteStream);
+            
+            // Create audio element to play remote stream
+            const audioId = `remote-audio-${fromUserId}`;
+            let audio = document.getElementById(audioId);
+            
+            if (!audio) {
+              audio = document.createElement('audio');
+              audio.id = audioId;
+              audio.autoplay = true;
+              audio.controls = false;
+              audio.style.display = 'none';
+              document.body.appendChild(audio);
+            }
+            
+            audio.srcObject = remoteStream;
+            audio.volume = isDeafened ? 0 : 1;
+            
+            // Ensure audio plays
+            audio.play().catch(e => {
+              console.log('Auto-play prevented, user interaction required:', e);
+              // Show a notification to user that they need to interact to enable audio
+              showNotification('Click anywhere to enable voice chat audio', 'warning');
+              
+              // Add click handler to enable audio
+              const enableAudio = () => {
+                audio.play().then(() => {
+                  console.log('Remote audio enabled for user:', fromUserId);
+                  document.removeEventListener('click', enableAudio);
+                }).catch(console.error);
+              };
+              document.addEventListener('click', enableAudio, { once: true });
+            });
+            
+            console.log('Remote audio stream set up for user:', fromUserId);
+          };
+          
+          // Handle ICE candidates
+          pc.onicecandidate = (event) => {
+            if (event.candidate) {
+              console.log('Sending ICE candidate to:', fromUserId);
+              socket.emit('webrtc_ice_candidate', {
+                roomId: roomId,
+                targetUserId: fromUserId,
+                fromUserId: userId,
+                candidate: event.candidate
+              });
+            }
+          };
+
+          // Handle connection state changes
+          pc.onconnectionstatechange = () => {
+            console.log('Connection state change for', fromUserId, ':', pc.connectionState);
+            if (pc.connectionState === 'connected') {
+              console.log('✅ Successfully connected to:', fromUserId);
+            } else if (pc.connectionState === 'failed') {
+              console.log('❌ Connection failed to:', fromUserId);
+            }
+          };
+        }
+        
+        console.log('Setting remote description for offer from:', fromUserId);
+        await pc.setRemoteDescription(offer);
+        
+        // Create and send answer
+        console.log('Creating answer for:', fromUserId);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        
+        console.log('Sending answer to:', fromUserId);
+        socket.emit('webrtc_answer', {
+          roomId: roomId,
+          targetUserId: fromUserId,
+          fromUserId: userId,
+          answer: answer
+        });
+        
+      } catch (error) {
+        console.error('Error handling offer from', fromUserId, ':', error);
+      }
+    }
+
+    // Handle received answer
+    async function handleAnswer(fromUserId, answer) {
+      try {
+        const pc = peerConnections.get(fromUserId);
+        if (pc) {
+          await pc.setRemoteDescription(answer);
+          console.log('Set remote description for answer from:', fromUserId);
+        }
+      } catch (error) {
+        console.error('Error handling answer:', error);
+      }
+    }
+
+    // Handle received ICE candidate
+    async function handleIceCandidate(fromUserId, candidate) {
+      try {
+        const pc = peerConnections.get(fromUserId);
+        if (pc) {
+          await pc.addIceCandidate(candidate);
+          console.log('Added ICE candidate from:', fromUserId);
+        }
+      } catch (error) {
+        console.error('Error handling ICE candidate:', error);
+      }
+    }
+
+    // Update voice chat UI
+    function updateVoiceChatUI() {
+      if (!joinVoiceBtn || !muteBtn || !deafenBtn || !leaveVoiceBtn) return;
+      
+      if (isInVoiceChat) {
+        joinVoiceBtn.style.display = 'none';
+        muteBtn.style.display = 'inline-block';
+        deafenBtn.style.display = 'inline-block';
+        leaveVoiceBtn.style.display = 'inline-block';
+        
+        // Update button states
+        muteBtn.className = isMuted ? 'footer-btn voice-muted' : 'footer-btn voice-connected';
+        muteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+        muteBtn.title = isMuted ? 'Unmute Microphone' : 'Mute Microphone';
+        
+        deafenBtn.className = isDeafened ? 'footer-btn voice-deafened' : 'footer-btn voice-connected';
+        deafenBtn.innerHTML = isDeafened ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        deafenBtn.title = isDeafened ? 'Enable Audio' : 'Deafen Audio';
+        
+      } else {
+        joinVoiceBtn.style.display = 'inline-block';
+        muteBtn.style.display = 'none';
+        deafenBtn.style.display = 'none';
+        leaveVoiceBtn.style.display = 'none';
+      }
+    }
+
+    // Update voice participants indicator
+    function updateVoiceParticipantsUI(participants) {
+      if (!voiceIndicator) return;
+      
+      const count = participants ? participants.length : 0;
+      if (count > 0) {
+        voiceIndicator.textContent = count;
+        voiceIndicator.style.display = 'flex';
+      } else {
+        voiceIndicator.style.display = 'none';
+      }
+    }
+
+    // ============== END WEBRTC VOICE CHAT FUNCTIONALITY ==============
 
     // Initialize editors with priority fallback approach
     function initializeEditor() {
@@ -4179,6 +4852,12 @@
       console.log('Terminal sidebar input:', document.getElementById('terminal-input-sidebar'));
       setupEventHandlers();
       console.log('Event handlers setup completed');
+
+      // Initialize voice chat functionality
+      setupVoiceChatEventListeners();
+      initializeVoiceChatSocket();
+      updateVoiceChatUI();
+      console.log('Voice chat initialized');
 
       // Toggle dark/light mode
       setupThemeToggle();

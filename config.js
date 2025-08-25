@@ -462,8 +462,56 @@ const roomSchema = new mongoose.Schema({
 roomSchema.index({ createdBy: 1 });
 roomSchema.index({ isActive: 1 });
 
+// Voice chat room schema for tracking voice participants
+const voiceChatSchema = new mongoose.Schema({
+  roomId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  participants: [{
+    userId: {
+      type: String,
+      required: true
+    },
+    username: {
+      type: String,
+      required: true
+    },
+    socketId: {
+      type: String,
+      required: true
+    },
+    isMuted: {
+      type: Boolean,
+      default: false
+    },
+    isDeafened: {
+      type: Boolean,
+      default: false
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  lastActivity: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Index for efficient voice chat lookups
+voiceChatSchema.index({ roomId: 1 });
+voiceChatSchema.index({ "participants.userId": 1 });
+
 const collection = mongoose.model("users", loginschema);
 const Room = mongoose.model("rooms", roomSchema);
+const VoiceChat = mongoose.model("voicechats", voiceChatSchema);
 
 // Utility functions for activity tracking
 async function trackUserActivity(userEmail, activityType, title, description, metadata = {}) {
@@ -736,7 +784,8 @@ async function autoSaveRoomData(roomId, code, language, userId, username) {
 export { 
   collection, 
   collection as User, // Alias for external scripts
-  Room, 
+  Room,
+  VoiceChat, 
   connectDB, 
   ensureDBConnection, 
   safeDBOperation,
