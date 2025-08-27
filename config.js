@@ -5,8 +5,24 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Get MongoDB URI from environment or fallback to localhost for development
-const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/codecollab";
+const MONGODB_URI = process.env.NODE_ENV === 'production' 
+  ? process.env.MONGODB_URI 
+  : (process.env.MONGODB_LOCAL || "mongodb://localhost:27017/codecollab");
+
+// Function to check if we can connect to remote MongoDB
+async function testMongoDBConnection(uri) {
+  try {
+    const testConnection = await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000, // 5 second timeout for testing
+      connectTimeoutMS: 5000,
+    });
+    await testConnection.disconnect();
+    return true;
+  } catch (error) {
+    console.log(`Failed to connect to ${uri}:`, error.message);
+    return false;
+  }
+}
 
 // Cache connection for serverless environment
 let cachedConnection = null;
@@ -372,10 +388,22 @@ const loginschema = new mongoose.Schema({
       executionTime: Number
     }]
   },
+  // Password reset functionality
+  passwordReset: {
+    token: {
+      type: String,
+      required: false
+    },
+    tokenExpiry: {
+      type: Date,
+      required: false
+    }
+  }
 });
 
 // Add compound index for more efficient lookups
 loginschema.index({ email: 1, authType: 1 });
+loginschema.index({ 'passwordReset.token': 1 }); // Index for password reset tokens
 
 // Room schema for storing room data
 const roomSchema = new mongoose.Schema({

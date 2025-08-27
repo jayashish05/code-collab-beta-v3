@@ -19,6 +19,8 @@ import { exec, spawn } from "child_process"; // Add for code execution
 import { promisify } from "util"; // Add for promisifying exec
 import { GoogleGenerativeAI } from "@google/generative-ai"; // Add Gemini AI integration
 import Razorpay from "razorpay"; // Add Razorpay for payments
+import nodemailer from "nodemailer"; // Add email functionality for password reset
+import bcrypt from "bcrypt"; // Add bcrypt for password hashing
 
 // Validate required environment variables for Vercel
 const requiredEnvVars = ['MONGODB_URI'];
@@ -46,6 +48,8 @@ console.log('GITHUB_CLIENT_SECRET:', process.env.GITHUB_CLIENT_SECRET ? 'Set' : 
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Not set');
 console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID ? 'Set' : 'Not set');
 console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'Set' : 'Not set');
+console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
+console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
 
 dotenv.config();
 
@@ -54,6 +58,26 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET
 });
+
+// Configure nodemailer for sending emails
+let transporter = null;
+
+try {
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    transporter = nodemailer.createTransport({
+      service: 'gmail', // You can change this to your email service
+      auth: {
+        user: process.env.EMAIL_USER, // Your email
+        pass: process.env.EMAIL_PASS  // Your app password (not regular password)
+      }
+    });
+    console.log('Email transporter configured successfully');
+  } else {
+    console.warn('Email configuration missing - forgot password emails will not be sent');
+  }
+} catch (error) {
+  console.error('Failed to configure email transporter:', error);
+}
 
 // Initialize database connection
 console.log('Initializing database connection...');
@@ -1808,7 +1832,7 @@ app.get("/auth/forgot-password", (req, res) => {
 });
 
 // Add route for handling the forgot password form submission
-app.post("/auth/forgot-password", (req, res) => {
+app.post("/auth/forgot-password", async (req, res) => {
   const email = req.body.email;
 
   // Basic validation
@@ -1830,14 +1854,262 @@ app.post("/auth/forgot-password", (req, res) => {
     });
   }
 
-  // In a real application, this would send a password reset email
-  // For this implementation, we'll just show a success message
+  try {
+    await ensureDBConnection();
+    
+    // Find user by email
+    const user = await collection.findOne({ email: email.toLowerCase() });
+    
+    // For security, we show the same message whether user exists or not
+    if (!user) {
+      return res.render("forgot-password.ejs", {
+        title: "Forgot Password",
+        success: "If an account with that email exists, we've sent a password reset link.",
+      });
+    }
 
-  return res.render("forgot-password.ejs", {
-    title: "Forgot Password",
-    success:
-      "If an account with that email exists, we've sent a password reset link.",
-  });
+    // Only allow password reset for local auth users
+    if (user.authType !== 'local') {
+      return res.render("forgot-password.ejs", {
+        title: "Forgot Password",
+        error: "Password reset is only available for accounts created with email/password. Please sign in using your social account.",
+        formData: { email: email },
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+    // Save token to database
+    await collection.updateOne(
+      { email: email.toLowerCase() },
+      {
+        $set: {
+          'passwordReset.token': resetToken,
+          'passwordReset.tokenExpiry': tokenExpiry
+        }
+      }
+    );
+
+    // Prepare reset URL - use production domain or fallback to request host
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://www.code-collab.me' 
+      : `${req.protocol}://${req.get('host')}`;
+    const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`;
+
+    // Email content
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'CodeCollab - Password Reset Request',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #3b82f6;">CodeCollab</h1>
+          </div>
+          
+          <h2 style="color: #333;">Password Reset Request</h2>
+          
+          <p style="color: #555; font-size: 16px;">
+            Hello ${user.fullname || 'User'},
+          </p>
+          
+          <p style="color: #555; font-size: 16px;">
+            We received a request to reset your password for your CodeCollab account. 
+            Click the button below to reset your password:
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" 
+               style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+              Reset Password
+            </a>
+          </div>
+          
+          <p style="color: #555; font-size: 14px;">
+            If the button doesn't work, copy and paste this link into your browser:
+          </p>
+          <p style="color: #3b82f6; font-size: 14px; word-break: break-all;">
+            ${resetUrl}
+          </p>
+          
+          <p style="color: #777; font-size: 14px; margin-top: 30px;">
+            This link will expire in 1 hour for security reasons.
+          </p>
+          
+          <p style="color: #777; font-size: 14px;">
+            If you didn't request this password reset, please ignore this email. 
+            Your password will remain unchanged.
+          </p>
+          
+          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            CodeCollab - Real-time collaborative coding platform
+          </p>
+        </div>
+      `
+    };
+
+    // Check if email is configured
+    if (!transporter) {
+      return res.render("forgot-password.ejs", {
+        title: "Forgot Password",
+        error: "Email service is not configured. Please contact support for password reset assistance.",
+        formData: { email: email },
+      });
+    }
+
+    // Send email
+    await transporter.sendMail(mailOptions);
+    
+    console.log(`Password reset email sent to: ${email}`);
+
+    return res.render("forgot-password.ejs", {
+      title: "Forgot Password",
+      success: "Password reset link has been sent to your email address. Please check your inbox.",
+    });
+
+  } catch (error) {
+    console.error("Error in forgot password:", error);
+    return res.render("forgot-password.ejs", {
+      title: "Forgot Password",
+      error: "An error occurred while processing your request. Please try again later.",
+      formData: { email: email },
+    });
+  }
+});
+
+// Password reset routes - handle the link from email
+app.get("/auth/reset-password", async (req, res) => {
+  console.log("=== GET /auth/reset-password called ===");
+  const token = req.query.token;
+  console.log("Token from URL:", token);
+
+  if (!token) {
+    console.log("No token provided in URL - redirecting to signin");
+    return res.render("signin.ejs", {
+      title: "Sign In",
+      error: "Invalid password reset link. Please request a new password reset from the forgot password page.",
+    });
+  }
+
+  try {
+    await ensureDBConnection();
+    
+    // Find user with valid token
+    const user = await collection.findOne({
+      'passwordReset.token': token,
+      'passwordReset.tokenExpiry': { $gt: new Date() } // Token not expired
+    });
+
+    console.log("User found for token:", user ? user.email : 'No user found');
+
+    if (!user) {
+      return res.render("signin.ejs", {
+        title: "Sign In",
+        error: "Password reset link is invalid or has expired. Please request a new one.",
+      });
+    }
+
+    // Render reset password form
+    console.log("Rendering reset-password.ejs with token:", token, "for user:", user.email);
+    res.render("reset-password.ejs", {
+      title: "Reset Password",
+      token: token,
+      email: user.email
+    });
+
+  } catch (error) {
+    console.error("Error in reset password GET:", error);
+    return res.render("signin.ejs", {
+      title: "Sign In",
+      error: "An error occurred. Please try again later.",
+    });
+  }
+});
+
+app.post("/auth/reset-password", async (req, res) => {
+  const { token, password, confirmPassword } = req.body;
+  console.log("Reset password POST route accessed with token:", token);
+
+  if (!token || !password || !confirmPassword) {
+    console.log("Missing required fields");
+    return res.render("reset-password.ejs", {
+      title: "Reset Password",
+      error: "All fields are required.",
+      token: token
+    });
+  }
+
+  if (password !== confirmPassword) {
+    console.log("Passwords don't match");
+    return res.render("reset-password.ejs", {
+      title: "Reset Password",
+      error: "Passwords do not match.",
+      token: token
+    });
+  }
+
+  if (password.length < 6) {
+    console.log("Password too short");
+    return res.render("reset-password.ejs", {
+      title: "Reset Password",
+      error: "Password must be at least 6 characters long.",
+      token: token
+    });
+  }
+
+  try {
+    await ensureDBConnection();
+    
+    // Find user with valid token
+    const user = await collection.findOne({
+      'passwordReset.token': token,
+      'passwordReset.tokenExpiry': { $gt: new Date() }
+    });
+
+    if (!user) {
+      console.log("Invalid or expired token");
+      return res.render("signin.ejs", {
+        title: "Sign In",
+        error: "Password reset link is invalid or has expired.",
+      });
+    }
+
+    // Hash the new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Update user's password and remove reset token
+    await collection.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          password: hashedPassword
+        },
+        $unset: {
+          'passwordReset.token': '',
+          'passwordReset.tokenExpiry': ''
+        }
+      }
+    );
+
+    console.log(`Password reset successfully for user: ${user.email}`);
+
+    return res.render("signin.ejs", {
+      title: "Sign In",
+      success: "Your password has been reset successfully. Please sign in with your new password.",
+    });
+
+  } catch (error) {
+    console.error("Error in reset password POST:", error);
+    return res.render("reset-password.ejs", {
+      title: "Reset Password",
+      error: "An error occurred while resetting your password. Please try again.",
+      token: token
+    });
+  }
 });
 
 // Google OAuth routes with improved logging

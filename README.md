@@ -19,7 +19,8 @@ Screenshots:
 - **Multiple Language Support**: JavaScript, Python, Java, C#, C++, PHP, Ruby, Go, Swift
 - **Live Chat**: Communicate with team members while coding
 - **Password Protected Rooms**: Secure your coding sessions
-- **User Authentication**: Google OAuth and local authentication
+- **User Authentication**: Google OAuth and local authentication with password reset
+- **Forgot Password**: Email-based password reset functionality
 - **Syntax Highlighting**: Clear code visualization with theme options
 - **Responsive Design**: Works on desktop and mobile devices
 - **Room Capacity**: Up to 4 members per room
@@ -85,6 +86,10 @@ Screenshots:
 
    # AI Configuration (for Pro features)
    GEMINI_API_KEY=your_gemini_api_key
+
+   # Email Configuration (for password reset)
+   EMAIL_USER=your_gmail_address
+   EMAIL_PASS=your_gmail_app_password
 
    # Payment Configuration (Razorpay)
    RAZORPAY_KEY_ID=your_razorpay_key_id
