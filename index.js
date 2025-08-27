@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth2";
+import { Strategy as GitHubStrategy } from "passport-github2";
 import session from "express-session";
 import randomInteger from "random-int";
 import { v4 as uuidv4 } from "uuid";
@@ -40,6 +41,8 @@ console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');
 console.log('SESSION_SECRET:', process.env.SESSION_SECRET ? 'Set' : 'Using default');
 console.log('CLIENT_ID:', process.env.CLIENT_ID ? 'Set' : 'Not set');
 console.log('CLIENT_GOOGLE_SECRET:', process.env.CLIENT_GOOGLE_SECRET ? 'Set' : 'Not set');
+console.log('GITHUB_CLIENT_ID:', process.env.GITHUB_CLIENT_ID ? 'Set' : 'Not set');
+console.log('GITHUB_CLIENT_SECRET:', process.env.GITHUB_CLIENT_SECRET ? 'Set' : 'Not set');
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'Set' : 'Not set');
 console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID ? 'Set' : 'Not set');
 console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'Set' : 'Not set');
@@ -782,6 +785,18 @@ console.log("- isDevTunnel:", isDevTunnel);
 console.log("- Base URL:", baseURL);
 console.log("- Google OAuth Callback URL:", googleCallbackURL);
 
+// GitHub callback URL (follows same pattern as Google)
+let githubCallbackURL;
+if (process.env.GITHUB_CALLBACK_URL) {
+  githubCallbackURL = process.env.GITHUB_CALLBACK_URL;
+} else if (isVercelProduction) {
+  githubCallbackURL = "https://code-collab-beta-v3.vercel.app/auth/github/callback";
+} else {
+  const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
+  githubCallbackURL = `${protocol}://localhost:3002/auth/github/callback`;
+}
+console.log("- GitHub OAuth Callback URL:", githubCallbackURL);
+
 passport.use(
   "google",
   new GoogleStrategy(
@@ -907,6 +922,125 @@ passport.use(
       }
     },
   ),
+);
+
+// GitHub OAuth Strategy
+passport.use(
+  "github",
+  new GitHubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: githubCallbackURL,
+      passReqToCallback: true,
+      proxy: true, // Important for working with proxied connections
+    },
+    async (req, accessToken, refreshToken, profile, cb) => {
+      try {
+        console.log("GitHub profile:", profile.id, profile.displayName || profile.username);
+        console.log("Looking up GitHub user with ID:", profile.id);
+
+        if (!profile.id) {
+          console.error("Invalid GitHub profile data - no ID");
+          return cb(new Error("Invalid GitHub profile data"), null);
+        }
+
+        // GitHub emails might be null if user hasn't made their email public
+        const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+        const username = profile.username;
+
+        // Use safe database operation to find user by GitHub ID
+        let user = await safeDBOperation(async () => {
+          return await collection.findOne({ githubId: profile.id });
+        });
+
+        // Create user object with necessary profile data
+        const userData = {
+          githubId: profile.id,
+          fullname: profile.displayName || profile.username,
+          username: username,
+          picture: profile.photos?.[0]?.value,
+          email: email,
+          accessToken: accessToken,
+          authType: "github", // Set auth type to github
+          lastLogin: new Date(),
+        };
+
+        if (user) {
+          // Update existing user with latest GitHub data and login time
+          console.log("Updating existing GitHub user");
+          user = await safeDBOperation(async () => {
+            return await collection.findOneAndUpdate(
+              { githubId: profile.id },
+              { 
+                $set: {
+                  ...userData,
+                  premium: user.premium || false, // Preserve premium status
+                  subscriptionType: user.subscriptionType || 'free',
+                  subscriptionEndDate: user.subscriptionEndDate,
+                  paymentHistory: user.paymentHistory || []
+                }
+              },
+              { returnDocument: "after" }
+            );
+          });
+        } else {
+          // Check if user exists with same email (if email is available)
+          let existingUser = null;
+          if (email) {
+            existingUser = await safeDBOperation(async () => {
+              return await collection.findOne({ email: email });
+            });
+          }
+
+          if (existingUser) {
+            // Link GitHub to existing account
+            console.log("Linking GitHub to existing account");
+            user = await safeDBOperation(async () => {
+              return await collection.findOneAndUpdate(
+                { email: email },
+                { 
+                  $set: {
+                    githubId: profile.id,
+                    username: username,
+                    lastLogin: new Date(),
+                    // Keep existing premium status and other data
+                    premium: existingUser.premium || false,
+                    subscriptionType: existingUser.subscriptionType || 'free',
+                    subscriptionEndDate: existingUser.subscriptionEndDate,
+                    paymentHistory: existingUser.paymentHistory || []
+                  }
+                },
+                { returnDocument: "after" }
+              );
+            });
+          } else {
+            // Create new GitHub user
+            console.log("Creating new GitHub user");
+            userData.premium = false;
+            userData.subscriptionType = 'free';
+            userData.paymentHistory = [];
+            
+            user = await safeDBOperation(async () => {
+              const result = await collection.insertOne(userData);
+              return { ...userData, _id: result.insertedId };
+            });
+          }
+        }
+
+        if (!user) {
+          console.error("Failed to create or find GitHub user");
+          return cb(new Error("Failed to authenticate with GitHub"), null);
+        }
+
+        console.log("GitHub authentication successful for user:", user.email || user.username);
+        return cb(null, user);
+      } catch (error) {
+        console.error("GitHub authentication error:", error);
+        return cb(error, null);
+      }
+    }
+  )
 );
 
 // Middleware to make user available to all templates
@@ -1771,6 +1905,73 @@ app.get(
     }
     res.redirect(
       "/auth/signin?error=google_auth_failed&message=" +
+        encodeURIComponent(err.message || "Authentication failed"),
+    );
+  },
+);
+
+// GitHub OAuth routes with improved logging
+app.get(
+  "/auth/github",
+  (req, res, next) => {
+    console.log("Starting GitHub OAuth process");
+    // Store the return URL in session if provided
+    if (req.query.returnTo) {
+      req.session.returnTo = req.query.returnTo;
+    }
+    next();
+  },
+  passport.authenticate("github", {
+    scope: ["user:email", "read:user"],
+  }),
+);
+
+app.get(
+  "/auth/github/callback",
+  (req, res, next) => {
+    console.log("Received GitHub OAuth callback", req.query);
+    next();
+  },
+  passport.authenticate("github", {
+    failureRedirect: "/auth/signin",
+    failWithError: true,
+  }),
+  function (req, res) {
+    console.log("GitHub auth successful, redirecting to dashboard");
+    console.log("User authenticated:", req.user?.email || req.user?.username);
+    console.log("Session ID after GitHub auth:", req.sessionID);
+
+    // Store auth type and timestamp in session
+    req.session.authType = "github";
+    req.session.authTime = new Date().toISOString();
+    req.session.loginSuccess = true;
+
+    // Get the return URL from session or default to dashboard
+    const returnTo = req.session.returnTo || "/dashboard";
+    delete req.session.returnTo;
+
+    // Create the full redirect URL using the correct base URL
+    const redirectURL = returnTo.startsWith('http') ? returnTo : `${baseURL}${returnTo}`;
+    console.log("Redirecting to:", redirectURL);
+
+    // Force session save before redirecting
+    req.session.save((err) => {
+      if (err) {
+        console.error("Error saving session:", err);
+      }
+      res.redirect(redirectURL);
+    });
+  },
+  function (err, req, res, next) {
+    console.error("GitHub auth error:", err);
+    // Store error message in session
+    req.session.authError = err.message || "GitHub authentication failed";
+    // Log specific error details for debugging
+    if (err.oauthError) {
+      console.error("OAuth error details:", err.oauthError);
+    }
+    res.redirect(
+      "/auth/signin?error=github_auth_failed&message=" +
         encodeURIComponent(err.message || "Authentication failed"),
     );
   },

@@ -169,7 +169,10 @@ const loginschema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true,
+    required: function() {
+      // Email is not required for GitHub users since they might not have public email
+      return this.authType !== 'github';
+    },
   },
   password: {
     type: String,
@@ -184,6 +187,15 @@ const loginschema = new mongoose.Schema({
     required: false,
     index: true, // Add index for faster lookup
   },
+  githubId: {
+    type: String,
+    required: false,
+    index: true, // Add index for faster lookup
+  },
+  username: {
+    type: String,
+    required: false, // GitHub username
+  },
   picture: {
     type: String,
     required: false,
@@ -195,7 +207,7 @@ const loginschema = new mongoose.Schema({
   // Add authType to distinguish between local and OAuth users
   authType: {
     type: String,
-    enum: ["local", "google"],
+    enum: ["local", "google", "github"],
     default: "local",
   },
   // Subscription information for pro features
