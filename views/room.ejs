@@ -1511,6 +1511,198 @@
       transform: translateX(26px);
     }
 
+    /* Voice Chat Options Modal Styles */
+    .voice-participants-section {
+      margin-bottom: 30px;
+    }
+
+    .voice-section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    body:not(.dark-mode) .voice-section-title {
+      color: #333;
+    }
+
+    .voice-participants-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .voice-participant-card {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      background-color: rgba(40, 40, 50, 0.5);
+      border-radius: 8px;
+      border: 1px solid rgba(70, 70, 90, 0.3);
+    }
+
+    body:not(.dark-mode) .voice-participant-card {
+      background-color: rgba(250, 250, 250, 0.8);
+      border-color: #e0e0e0;
+    }
+
+    .voice-participant-avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      margin-right: 12px;
+    }
+
+    .voice-participant-info {
+      flex: 1;
+    }
+
+    .voice-participant-name {
+      font-weight: 500;
+      color: #e0e0e0;
+      margin-bottom: 2px;
+    }
+
+    body:not(.dark-mode) .voice-participant-name {
+      color: #333;
+    }
+
+    .voice-participant-status {
+      font-size: 0.8rem;
+      color: #a0a0a0;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .voice-status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #28a745;
+    }
+
+    .voice-status-indicator.muted {
+      background-color: #dc3545;
+    }
+
+    .voice-status-indicator.deafened {
+      background-color: #ffc107;
+    }
+
+    .no-voice-participants {
+      text-align: center;
+      padding: 30px 20px;
+      color: #a0a0a0;
+    }
+
+    .no-voice-participants i {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      opacity: 0.5;
+    }
+
+    .no-voice-participants p {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .voice-controls-section {
+      border-top: 1px solid rgba(70, 70, 90, 0.3);
+      padding-top: 20px;
+    }
+
+    body:not(.dark-mode) .voice-controls-section {
+      border-color: #e0e0e0;
+    }
+
+    .voice-control-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 0;
+      border-bottom: 1px solid rgba(70, 70, 90, 0.2);
+    }
+
+    body:not(.dark-mode) .voice-control-item {
+      border-color: #f0f0f0;
+    }
+
+    .voice-control-item:last-child {
+      border-bottom: none;
+    }
+
+    .voice-control-info {
+      flex: 1;
+    }
+
+    .voice-control-name {
+      font-weight: 500;
+      color: #e0e0e0;
+      margin-bottom: 4px;
+    }
+
+    body:not(.dark-mode) .voice-control-name {
+      color: #333;
+    }
+
+    .voice-control-description {
+      font-size: 0.85rem;
+      color: #a0a0a0;
+    }
+
+    .voice-control-btn {
+      padding: 8px 16px;
+      border: 1px solid rgba(70, 70, 90, 0.5);
+      border-radius: 6px;
+      background-color: rgba(40, 40, 50, 0.5);
+      color: #e0e0e0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+    }
+
+    body:not(.dark-mode) .voice-control-btn {
+      background-color: rgba(250, 250, 250, 0.8);
+      border-color: #ddd;
+      color: #333;
+    }
+
+    .voice-control-btn:hover {
+      background-color: rgba(60, 60, 80, 0.7);
+      border-color: #007aff;
+    }
+
+    body:not(.dark-mode) .voice-control-btn:hover {
+      background-color: rgba(240, 240, 240, 0.9);
+      border-color: #007aff;
+    }
+
+    .voice-control-btn.active {
+      background-color: #007aff;
+      border-color: #007aff;
+      color: white;
+    }
+
+    .voice-control-btn.danger {
+      border-color: #dc3545;
+      color: #dc3545;
+    }
+
+    .voice-control-btn.danger:hover {
+      background-color: #dc3545;
+      color: white;
+    }
+
     /* Theme Selector */
     .theme-grid {
       display: grid;
@@ -2225,15 +2417,21 @@
           Join Voice
           <span id="voice-participants-indicator">0</span>
         </button>
-        <button class="footer-btn" id="mute-btn" style="display: none;" title="Toggle Microphone">
-          <i class="fas fa-microphone"></i>
+        <button class="btn btn-sm btn-outline-danger" id="mute-btn" style="display: none;" title="Toggle Microphone">
+          <i class="fas fa-microphone-slash"></i>
+          Mute
         </button>
-        <button class="footer-btn" id="deafen-btn" style="display: none;" title="Toggle Audio (Deafen)">
-          <i class="fas fa-volume-up"></i>
+        <button class="btn btn-sm btn-outline-danger" id="deafen-btn" style="display: none;" title="Toggle Audio (Deafen)">
+          <i class="fas fa-volume-mute"></i>
+          Deafen
         </button>
         <button class="footer-btn" id="leave-voice-btn" style="display: none;" title="Leave Voice Chat">
           <i class="fas fa-door-open"></i>
           Leave Call
+        </button>
+        <button class="footer-btn" id="voice-chat-options-btn" style="display: none;" title="Voice Chat Options">
+          <i class="fas fa-cog"></i>
+          Voice Chat Options
         </button>
         
         <!-- Existing buttons -->
@@ -2583,6 +2781,68 @@
               <input type="checkbox" id="setting-auto-complete" checked>
               <span class="toggle-slider"></span>
             </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voice Chat Options Modal -->
+  <div class="modal-overlay" id="voice-chat-options-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title">Voice Chat Options</h3>
+        <button class="modal-close" id="voice-chat-options-close-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <!-- Voice Chat Participants List -->
+        <div class="voice-participants-section">
+          <h4 class="voice-section-title">
+            <i class="fas fa-users"></i>
+            Voice Participants
+          </h4>
+          <div class="voice-participants-list" id="voice-participants-list">
+            <!-- Voice participants will be populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Voice Chat Controls -->
+        <div class="voice-controls-section">
+          <h4 class="voice-section-title">
+            <i class="fas fa-cog"></i>
+            Voice Controls
+          </h4>
+          <div class="voice-control-item">
+            <div class="voice-control-info">
+              <div class="voice-control-name">Microphone</div>
+              <div class="voice-control-description">Toggle your microphone on/off</div>
+            </div>
+            <button class="voice-control-btn" id="modal-mute-btn">
+              <i class="fas fa-microphone"></i>
+              Unmuted
+            </button>
+          </div>
+          <div class="voice-control-item">
+            <div class="voice-control-info">
+              <div class="voice-control-name">Audio Output</div>
+              <div class="voice-control-description">Deafen yourself to stop hearing others</div>
+            </div>
+            <button class="voice-control-btn" id="modal-deafen-btn">
+              <i class="fas fa-volume-up"></i>
+              Hearing
+            </button>
+          </div>
+          <div class="voice-control-item">
+            <div class="voice-control-info">
+              <div class="voice-control-name">Leave Voice Chat</div>
+              <div class="voice-control-description">Exit the voice chat completely</div>
+            </div>
+            <button class="voice-control-btn danger" id="modal-leave-voice-btn">
+              <i class="fas fa-door-open"></i>
+              Leave Call
+            </button>
           </div>
         </div>
       </div>
@@ -3041,6 +3301,7 @@
     let localAudioStream = null;
     let peerConnections = new Map(); // Map of userId -> RTCPeerConnection
     let remoteAudioStreams = new Map(); // Map of userId -> MediaStream
+    let voiceParticipants = []; // Array to store voice participants data
     
     // WebRTC configuration
     const rtcConfiguration = {
@@ -3054,6 +3315,7 @@
     const muteBtn = document.getElementById('mute-btn');
     const deafenBtn = document.getElementById('deafen-btn');
     const leaveVoiceBtn = document.getElementById('leave-voice-btn');
+    const voiceChatOptionsBtn = document.getElementById('voice-chat-options-btn');
     const voiceIndicator = document.getElementById('voice-participants-indicator');
 
     // Add event listeners for voice chat buttons
@@ -3275,6 +3537,7 @@
       
       // Update UI
       updateVoiceChatUI();
+      updateVoiceChatOptionsModalControls();
       
       // Notify other participants
       socket.emit('voice_mute_toggle', {
@@ -3302,6 +3565,7 @@
       
       // Update UI
       updateVoiceChatUI();
+      updateVoiceChatOptionsModalControls();
       
       // Notify other participants
       socket.emit('voice_deafen_toggle', {
@@ -3578,14 +3842,15 @@
         muteBtn.style.display = 'inline-block';
         deafenBtn.style.display = 'inline-block';
         leaveVoiceBtn.style.display = 'inline-block';
+        if (voiceChatOptionsBtn) voiceChatOptionsBtn.style.display = 'inline-block';
         
         // Update button states
-        muteBtn.className = isMuted ? 'footer-btn voice-muted' : 'footer-btn voice-connected';
-        muteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+        muteBtn.className = isMuted ? 'btn btn-sm btn-outline-danger voice-muted' : 'btn btn-sm btn-outline-danger voice-connected';
+        muteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i> Unmute' : '<i class="fas fa-microphone"></i> Mute';
         muteBtn.title = isMuted ? 'Unmute Microphone' : 'Mute Microphone';
         
-        deafenBtn.className = isDeafened ? 'footer-btn voice-deafened' : 'footer-btn voice-connected';
-        deafenBtn.innerHTML = isDeafened ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        deafenBtn.className = isDeafened ? 'btn btn-sm btn-outline-danger voice-deafened' : 'btn btn-sm btn-outline-danger voice-connected';
+        deafenBtn.innerHTML = isDeafened ? '<i class="fas fa-volume-mute"></i> Undeafen' : '<i class="fas fa-volume-up"></i> Deafen';
         deafenBtn.title = isDeafened ? 'Enable Audio' : 'Deafen Audio';
         
       } else {
@@ -3593,6 +3858,7 @@
         muteBtn.style.display = 'none';
         deafenBtn.style.display = 'none';
         leaveVoiceBtn.style.display = 'none';
+        if (voiceChatOptionsBtn) voiceChatOptionsBtn.style.display = 'none';
       }
     }
 
@@ -3600,12 +3866,73 @@
     function updateVoiceParticipantsUI(participants) {
       if (!voiceIndicator) return;
       
+      // Store participants data for the modal
+      voiceParticipants = participants || [];
+      
       const count = participants ? participants.length : 0;
       if (count > 0) {
         voiceIndicator.textContent = count;
         voiceIndicator.style.display = 'flex';
       } else {
         voiceIndicator.style.display = 'none';
+      }
+      
+      // Update voice participants modal if it's open
+      updateVoiceParticipantsModal();
+    }
+
+    // Update voice participants modal content
+    function updateVoiceParticipantsModal() {
+      const voiceParticipantsList = document.getElementById('voice-participants-list');
+      
+      if (!voiceParticipantsList) return;
+      
+      // Clear current list
+      voiceParticipantsList.innerHTML = '';
+      
+      if (voiceParticipants.length === 0) {
+        // Show no participants message
+        const noParticipants = document.createElement('div');
+        noParticipants.className = 'no-voice-participants';
+        noParticipants.innerHTML = `
+          <i class="fas fa-microphone-slash"></i>
+          <p>No one is currently in voice chat</p>
+        `;
+        voiceParticipantsList.appendChild(noParticipants);
+      } else {
+        // Show participants list
+        voiceParticipants.forEach(participant => {
+          const participantCard = document.createElement('div');
+          participantCard.className = 'voice-participant-card';
+          participantCard.innerHTML = `
+            <img src="${participant.picture || `https://ui-avatars.com/api/?name=${participant.username}`}" 
+                 alt="${participant.username}'s avatar" class="voice-participant-avatar">
+            <div class="voice-participant-info">
+              <div class="voice-participant-name">${participant.username}${participant.userId === userId ? ' (You)' : ''}</div>
+              <div class="voice-participant-status">
+                <span class="voice-status-indicator ${participant.muted ? 'muted' : ''}${participant.deafened ? 'deafened' : ''}"></span>
+                ${participant.muted ? 'Muted' : participant.deafened ? 'Deafened' : 'Speaking'}
+              </div>
+            </div>
+          `;
+          voiceParticipantsList.appendChild(participantCard);
+        });
+      }
+    }
+
+    // Update voice chat modal controls to reflect current state
+    function updateVoiceChatOptionsModalControls() {
+      const modalMuteBtn = document.getElementById('modal-mute-btn');
+      const modalDeafenBtn = document.getElementById('modal-deafen-btn');
+      
+      if (modalMuteBtn) {
+        modalMuteBtn.className = isMuted ? 'voice-control-btn active' : 'voice-control-btn';
+        modalMuteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i> Muted' : '<i class="fas fa-microphone"></i> Unmuted';
+      }
+      
+      if (modalDeafenBtn) {
+        modalDeafenBtn.className = isDeafened ? 'voice-control-btn active' : 'voice-control-btn';
+        modalDeafenBtn.innerHTML = isDeafened ? '<i class="fas fa-volume-mute"></i> Deafened' : '<i class="fas fa-volume-up"></i> Hearing';
       }
     }
 
@@ -5646,6 +5973,61 @@
         });
       } else {
         console.error('Settings close button not found!');
+      }
+
+      // Voice Chat Options button - show modal
+      const voiceChatOptionsBtn = document.getElementById('voice-chat-options-btn');
+      if (voiceChatOptionsBtn) {
+        console.log('Voice Chat Options button found, attaching event listener');
+        voiceChatOptionsBtn.addEventListener('click', function() {
+          console.log('Voice Chat Options button clicked');
+          const modal = document.getElementById('voice-chat-options-modal');
+          if (modal) {
+            updateVoiceParticipantsModal();
+            updateVoiceChatOptionsModalControls();
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+          } else {
+            console.error('Voice Chat Options modal not found!');
+          }
+        });
+      } else {
+        console.log('Voice Chat Options button not found!');
+      }
+
+      // Voice Chat Options modal close button
+      const voiceChatOptionsCloseBtn = document.getElementById('voice-chat-options-close-btn');
+      if (voiceChatOptionsCloseBtn) {
+        console.log('Voice Chat Options close button found, attaching event listener');
+        voiceChatOptionsCloseBtn.addEventListener('click', function() {
+          console.log('Voice Chat Options close button clicked');
+          closeModal('voice-chat-options-modal');
+        });
+      } else {
+        console.log('Voice Chat Options close button not found!');
+      }
+
+      // Voice Chat Modal Controls
+      const modalMuteBtn = document.getElementById('modal-mute-btn');
+      if (modalMuteBtn) {
+        modalMuteBtn.addEventListener('click', function() {
+          if (muteBtn) muteBtn.click();
+        });
+      }
+
+      const modalDeafenBtn = document.getElementById('modal-deafen-btn');
+      if (modalDeafenBtn) {
+        modalDeafenBtn.addEventListener('click', function() {
+          if (deafenBtn) deafenBtn.click();
+        });
+      }
+
+      const modalLeaveVoiceBtn = document.getElementById('modal-leave-voice-btn');
+      if (modalLeaveVoiceBtn) {
+        modalLeaveVoiceBtn.addEventListener('click', function() {
+          if (leaveVoiceBtn) leaveVoiceBtn.click();
+          closeModal('voice-chat-options-modal');
+        });
       }
 
       // Terminal button - toggle footer terminal panel
