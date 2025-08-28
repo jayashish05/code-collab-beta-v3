@@ -3326,7 +3326,7 @@ async function checkAiUsageLimit(userId) {
     const today = new Date().toDateString();
     
     // Pro users have higher limits
-    const dailyLimit = subscription.isPro ? 1000 : 10;
+    const dailyLimit = subscription.isPro ? 1000 : 5;
     
     // Check if daily usage tracking exists and is for today
     if (!subscription.limits || 
@@ -4165,6 +4165,28 @@ io.on("connection", (socket) => {
       socket.emit("cursor_positions", { cursors });
     }
 
+    // Send existing users' information to the new user
+    const existingUsers = [];
+    for (const userData of roomUsers.values()) {
+      if (userData.socketId !== socket.id) {
+        existingUsers.push({
+          userId: userData.userId,
+          username: userData.username,
+          picture: userData.picture,
+          color: userData.color || getColorForUser(userData.userId),
+          socketId: userData.socketId,
+          timestamp: Date.now()
+        });
+      }
+    }
+    
+    if (existingUsers.length > 0) {
+      // Send existing users to the new user
+      existingUsers.forEach(user => {
+        socket.emit("existing_user", user);
+      });
+    }
+
     // Notify all users in the room about the new user
     io.to(roomId).emit("user_joined", {
       userId,
@@ -4969,6 +4991,97 @@ io.on("connection", (socket) => {
     console.log(`User ${username} attempting to join voice chat in room ${roomId}`);
 
     try {
+      // Check if user has pro subscription or trial time
+      const user = await safeDBOperation(async () => {
+        return await collection.findOne({ 
+          $or: [
+            { email: userId },
+            { googleId: userId },
+            { githubId: userId },
+            { _id: userId }
+          ]
+        });
+      });
+
+      if (!user) {
+        console.log(`User ${username} not found in database`);
+        socket.emit("voice_join_error", { 
+          message: "User not found. Please sign in again.",
+          requiresPro: false
+        });
+        return;
+      }
+
+      // Check subscription status
+      const subscription = user.subscription || { isPro: false, planType: 'free' };
+      
+      // Check if subscription has expired
+      if (subscription.isPro && subscription.subscriptionEnd && new Date() > new Date(subscription.subscriptionEnd)) {
+        subscription.isPro = false;
+      }
+
+      // Voice chat access logic
+      if (!subscription.isPro) {
+        // Check trial usage for free users
+        const voiceTrial = user.subscription?.limits?.voiceChatTrial || {
+          totalMinutesUsed: 0,
+          hasUsedTrial: false,
+          trialStartDate: null
+        };
+
+        const TRIAL_LIMIT_MINUTES = 60; // 1 hour trial
+
+        if (voiceTrial.totalMinutesUsed >= TRIAL_LIMIT_MINUTES) {
+          console.log(`User ${username} has exhausted voice chat trial (${voiceTrial.totalMinutesUsed} minutes used)`);
+          socket.emit("voice_join_error", { 
+            message: `You've used your 1-hour Voice Chat trial (${voiceTrial.totalMinutesUsed} minutes). Upgrade to Pro for unlimited voice communication!`,
+            requiresPro: true,
+            feature: "voice_chat",
+            trialExhausted: true,
+            trialUsed: voiceTrial.totalMinutesUsed,
+            trialLimit: TRIAL_LIMIT_MINUTES
+          });
+          return;
+        }
+
+        // Initialize trial if first time
+        if (!voiceTrial.hasUsedTrial) {
+          await collection.updateOne(
+            { _id: user._id },
+            {
+              $set: {
+                'subscription.limits.voiceChatTrial.hasUsedTrial': true,
+                'subscription.limits.voiceChatTrial.trialStartDate': new Date()
+              }
+            }
+          );
+          console.log(`Voice chat trial initialized for user ${username}`);
+        }
+
+        // Start tracking current session
+        await collection.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              'subscription.limits.voiceChatTrial.currentSessionStart': new Date()
+            }
+          }
+        );
+
+        const remainingMinutes = TRIAL_LIMIT_MINUTES - voiceTrial.totalMinutesUsed;
+        console.log(`Free user ${username} joining voice chat with ${remainingMinutes} minutes remaining in trial`);
+        
+        // Emit trial info to client
+        socket.emit("voice_trial_status", {
+          isTrialUser: true,
+          remainingMinutes: remainingMinutes,
+          totalTrialMinutes: TRIAL_LIMIT_MINUTES,
+          usedMinutes: voiceTrial.totalMinutesUsed
+        });
+      } else {
+        console.log(`Pro user ${username} verified for unlimited voice chat access`);
+      }
+
       // Find or create voice chat room
       let voiceRoom = await safeDBOperation(async () => {
         return await VoiceChat.findOne({ roomId: roomId });
@@ -4998,6 +5111,7 @@ io.on("connection", (socket) => {
                 participants: {
                   userId: userId,
                   username: username,
+                  picture: user.picture || null,
                   socketId: socket.id,
                   isMuted: false,
                   isDeafened: false,
@@ -5009,13 +5123,14 @@ io.on("connection", (socket) => {
           );
         });
       } else {
-        // Update existing participant's socket ID
+        // Update existing participant's socket ID and profile picture
         await safeDBOperation(async () => {
           await VoiceChat.updateOne(
             { roomId: roomId, "participants.userId": userId },
             {
               $set: {
                 "participants.$.socketId": socket.id,
+                "participants.$.picture": user.picture || null,
                 "participants.$.isMuted": false,
                 "participants.$.isDeafened": false,
                 lastActivity: new Date()
@@ -5033,6 +5148,20 @@ io.on("connection", (socket) => {
         return await VoiceChat.findOne({ roomId: roomId });
       });
 
+      // Send existing voice chat users to the newly joined user
+      const existingVoiceUsers = updatedVoiceRoom.participants.filter(p => p.userId !== userId);
+      if (existingVoiceUsers.length > 0) {
+        existingVoiceUsers.forEach(existingUser => {
+          socket.emit("existing_voice_user", {
+            userId: existingUser.userId,
+            username: existingUser.username,
+            picture: existingUser.picture || null,
+            isMuted: existingUser.isMuted,
+            isDeafened: existingUser.isDeafened
+          });
+        });
+      }
+
       // Notify all participants about the new user
       io.to(`voice_${roomId}`).emit("voice_user_joined", {
         userId: userId,
@@ -5040,6 +5169,7 @@ io.on("connection", (socket) => {
         participants: updatedVoiceRoom.participants.map(p => ({
           userId: p.userId,
           username: p.username,
+          picture: p.picture || null,
           isMuted: p.isMuted,
           isDeafened: p.isDeafened
         })),
@@ -5052,6 +5182,7 @@ io.on("connection", (socket) => {
         participants: updatedVoiceRoom.participants.map(p => ({
           userId: p.userId,
           username: p.username,
+          picture: p.picture || null,
           isMuted: p.isMuted,
           isDeafened: p.isDeafened
         }))
@@ -5074,6 +5205,52 @@ io.on("connection", (socket) => {
     console.log(`User ${username || userId} leaving voice chat in room ${roomId}`);
 
     try {
+      // Track usage time for free users
+      const user = await safeDBOperation(async () => {
+        return await collection.findOne({ 
+          $or: [
+            { email: userId },
+            { googleId: userId },
+            { githubId: userId },
+            { _id: userId }
+          ]
+        });
+      });
+
+      if (user && user.subscription?.limits?.voiceChatTrial?.currentSessionStart) {
+        const sessionStart = new Date(user.subscription.limits.voiceChatTrial.currentSessionStart);
+        const sessionEnd = new Date();
+        const sessionMinutes = Math.floor((sessionEnd - sessionStart) / (1000 * 60));
+
+        if (sessionMinutes > 0) {
+          // Update total minutes used
+          await safeDBOperation(async () => {
+            await collection.updateOne(
+              { _id: user._id },
+              {
+                $inc: {
+                  'subscription.limits.voiceChatTrial.totalMinutesUsed': sessionMinutes
+                },
+                $unset: {
+                  'subscription.limits.voiceChatTrial.currentSessionStart': ''
+                }
+              }
+            );
+          });
+
+          const totalUsed = (user.subscription.limits.voiceChatTrial.totalMinutesUsed || 0) + sessionMinutes;
+          console.log(`User ${username} used ${sessionMinutes} minutes of voice chat trial (total: ${totalUsed}/60 minutes)`);
+
+          // Notify user about remaining time
+          const remaining = Math.max(0, 60 - totalUsed);
+          socket.emit("voice_trial_update", {
+            sessionMinutes: sessionMinutes,
+            totalUsed: totalUsed,
+            remainingMinutes: remaining
+          });
+        }
+      }
+
       // Remove user from voice chat
       await safeDBOperation(async () => {
         await VoiceChat.updateOne(
@@ -5101,6 +5278,7 @@ io.on("connection", (socket) => {
           participants: updatedVoiceRoom.participants.map(p => ({
             userId: p.userId,
             username: p.username,
+            picture: p.picture || null,
             isMuted: p.isMuted,
             isDeafened: p.isDeafened
           })),

@@ -289,6 +289,36 @@ const loginschema = new mongoose.Schema({
           type: Number,
           default: 0
         }
+      },
+      // Voice chat trial tracking
+      voiceChatTrial: {
+        totalMinutesUsed: {
+          type: Number,
+          default: 0
+        },
+        trialStartDate: {
+          type: Date,
+          default: null
+        },
+        currentSessionStart: {
+          type: Date,
+          default: null
+        },
+        hasUsedTrial: {
+          type: Boolean,
+          default: false
+        }
+      },
+      // Daily AI chat limits for free users
+      dailyAiChatUsage: {
+        date: {
+          type: Date,
+          default: () => new Date().toDateString()
+        },
+        count: {
+          type: Number,
+          default: 0
+        }
       }
     },
     paymentHistory: [{

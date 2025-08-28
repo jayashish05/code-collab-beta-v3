@@ -2412,11 +2412,19 @@
       </div>
       <div class="footer-right">
         <!-- Voice Chat Controls -->
-        <button class="footer-btn" id="join-voice-btn" title="Join Voice Chat" style="position: relative;">
-          <i class="fas fa-microphone"></i>
-          Join Voice
-          <span id="voice-participants-indicator">0</span>
-        </button>
+        <% if (req.user && req.user.subscription && req.user.subscription.isPro) { %>
+          <button class="footer-btn" id="join-voice-btn" title="Join Voice Chat" style="position: relative;">
+            <i class="fas fa-microphone"></i>
+            Join Voice
+            <span id="voice-participants-indicator">0</span>
+          </button>
+        <% } else { %>
+          <button class="footer-btn" id="join-voice-btn" title="Voice Chat (1 Hour Free Trial)" style="position: relative; background: linear-gradient(135deg, #4CAF50, #45a049); color: white;">
+            <i class="fas fa-microphone"></i>
+            Try Voice Chat
+            <span style="position: absolute; top: -8px; right: -8px; background: #ff6b35; color: white; border-radius: 50%; width: 24px; height: 20px; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: bold;">1HR</span>
+          </button>
+        <% } %>
         <button class="btn btn-sm btn-outline-danger" id="mute-btn" style="display: none;" title="Toggle Microphone">
           <i class="fas fa-microphone-slash"></i>
           Mute
@@ -2506,6 +2514,7 @@
       <div class="ai-chat-title-container">
         <i class="fas fa-robot"></i>
         <h6 class="ai-chat-title">AI Assistant</h6>
+        <small class="ai-usage-counter" id="ai-usage-counter" style="margin-left: 8px; opacity: 0.7; font-size: 11px;">Loading...</small>
       </div>
       <div class="ai-chat-controls">
         <div class="ai-model-selector">
@@ -2903,6 +2912,25 @@
     let currentAIModel = 'gemini-2.0-flash-exp';
     let aiConversationHistory = [];
     let isAIResponding = false;
+    let aiUsageRemaining = null;
+    let isProUser = <%= req.user && req.user.subscription && req.user.subscription.isPro ? 'true' : 'false' %>;
+
+    // Function to update AI usage counter
+    function updateAIUsageCounter() {
+      const counter = document.getElementById('ai-usage-counter');
+      if (!counter) return;
+      
+      if (isProUser) {
+        counter.textContent = 'Pro User';
+        counter.style.color = '#4CAF50';
+      } else if (aiUsageRemaining !== null) {
+        counter.textContent = `${aiUsageRemaining}/5 today`;
+        counter.style.color = aiUsageRemaining > 0 ? '#ffc107' : '#dc3545';
+      } else {
+        counter.textContent = 'Loading...';
+        counter.style.color = '#6c757d';
+      }
+    }
 
     // Edit Permission variables
     let isCurrentEditor = false;
@@ -2944,6 +2972,17 @@
         console.log('Disconnected from server');
         // You might want to show a reconnection message
         addSystemMessage('Disconnected from server. Trying to reconnect...');
+      });
+
+      // Handle existing users data sent to new user
+      socket.on('existing_user', (data) => {
+        console.log('Existing user:', data);
+        
+        // Add existing user avatar to the list if not already there
+        addRemoteAvatar(data.userId, data.username, data.picture);
+
+        // Add existing user to participants list
+        addParticipant(data.userId, data.username, data.picture, data.color);
       });
 
       // Room events
@@ -3356,6 +3395,20 @@
         }
       });
 
+      // Handle existing voice users when joining
+      socket.on('existing_voice_user', (data) => {
+        console.log('Existing voice user:', data);
+        
+        // Add the existing voice user to UI
+        addVoiceParticipantToUI(data);
+        
+        // If we're in voice chat, establish peer connection
+        if (isInVoiceChat && data.userId !== userId) {
+          console.log('Initiating peer connection to existing voice user:', data.userId);
+          setTimeout(() => createPeerConnection(data.userId), 1000);
+        }
+      });
+
       // Voice user left
       socket.on('voice_user_left', (data) => {
         console.log('Voice user left:', data);
@@ -3405,7 +3458,33 @@
       // Voice join error
       socket.on('voice_join_error', (data) => {
         console.error('Voice join error:', data.message);
-        showNotification('Failed to join voice chat: ' + data.message, 'error');
+        
+        if (data.requiresPro) {
+          // Show pro upgrade prompt for voice chat
+          showProUpgradeModal('voice_chat', data.message);
+        } else {
+          showNotification('Failed to join voice chat: ' + data.message, 'error');
+        }
+      });
+
+      // Voice chat trial status
+      socket.on('voice_trial_status', (data) => {
+        console.log('Voice trial status:', data);
+        if (data.isTrialUser) {
+          showNotification(`Voice Chat Trial: ${data.remainingMinutes} minutes remaining (${data.usedMinutes}/${data.totalTrialMinutes} used)`, 'info', 5000);
+        }
+      });
+
+      // Voice chat trial update
+      socket.on('voice_trial_update', (data) => {
+        console.log('Voice trial update:', data);
+        if (data.remainingMinutes === 0) {
+          showNotification('Voice chat trial expired! Upgrade to Pro for unlimited voice communication.', 'warning', 8000);
+        } else if (data.remainingMinutes <= 5) {
+          showNotification(`Voice Chat Trial: Only ${data.remainingMinutes} minutes remaining!`, 'warning', 5000);
+        } else {
+          showNotification(`Voice Chat Session: Used ${data.sessionMinutes} minutes. ${data.remainingMinutes} minutes remaining.`, 'info', 3000);
+        }
       });
 
       // Voice leave success
@@ -3879,6 +3958,30 @@
       
       // Update voice participants modal if it's open
       updateVoiceParticipantsModal();
+    }
+
+    // Add individual voice participant to UI (for existing users)
+    function addVoiceParticipantToUI(participant) {
+      if (!participant) return;
+      
+      // Check if participant already exists in the list
+      const existingIndex = voiceParticipants.findIndex(p => p.userId === participant.userId);
+      
+      if (existingIndex === -1) {
+        // Add new participant to the list
+        voiceParticipants.push(participant);
+        
+        // Update voice indicator count
+        if (voiceIndicator) {
+          voiceIndicator.textContent = voiceParticipants.length;
+          voiceIndicator.style.display = 'flex';
+        }
+        
+        // Update voice participants modal if it's open
+        updateVoiceParticipantsModal();
+        
+        console.log('Added voice participant to UI:', participant.username);
+      }
     }
 
     // Update voice participants modal content
@@ -4811,66 +4914,67 @@
     }
 
     // Add participant to the list
+    // Add participant to the list
     function addParticipant(userId, username, picture, color) {
       console.log('Adding participant:', userId, username);
-      // Skip if already in the list
-      if (document.getElementById(`participant-${userId}`)) {
-        console.log('Participant already exists:', userId);
-        return;
-      }
-
-      const userColor = color || getRandomColor(userId);
-      const participantsList = document.getElementById('participants-grid');
-
-      if (!participantsList) {
-        console.error('Participants list not found!');
-        return;
-      }
-
-      const participantDiv = document.createElement('div');
-      participantDiv.className = 'participant-card';
-      participantDiv.id = `participant-${userId}`;
-
-      participantDiv.innerHTML = `
-        <img src="${picture || `https://ui-avatars.com/api/?name=${username}`}" alt="${username}" class="participant-card-avatar">
-        <div class="participant-info">
-          <div class="participant-card-name">${username}</div>
-          <div class="participant-status">
-            <div class="status-indicator" style="background-color: ${userColor};"></div>
-            Online
+      
+      // Add to participants modal
+      const participantsGrid = document.getElementById('participants-grid');
+      if (participantsGrid && !document.getElementById(`participant-card-${userId}`)) {
+        const userColor = color || getRandomColor(userId);
+        
+        const participantCard = document.createElement('div');
+        participantCard.className = 'participant-card';
+        participantCard.id = `participant-card-${userId}`;
+        
+        participantCard.innerHTML = `
+          <img src="${picture || `https://ui-avatars.com/api/?name=${username}`}" alt="${username}" class="participant-card-avatar">
+          <div class="participant-info">
+            <div class="participant-card-name">${username}</div>
+            <div class="participant-status">
+              <div class="status-indicator"></div>
+              Online
+            </div>
           </div>
-        </div>
-      `;
+        `;
+        
+        participantsGrid.appendChild(participantCard);
+        console.log('Participant added to modal:', username);
+      }
 
-      participantsList.appendChild(participantDiv);
-      console.log('Participant added to list:', username);
-
-      // Update the count
-      const count = participantsList.querySelectorAll('.participant-card').length;
+      // Update the count in both footer and modal
+      const totalParticipants = document.querySelectorAll('.participant-card').length;
+      const onlineCountEl = document.getElementById('online-count');
       const participantsCountEl = document.getElementById('participants-count');
-      if (participantsCountEl) participantsCountEl.textContent = count;
-      console.log('Updated participant count:', count);
+      
+      if (onlineCountEl) onlineCountEl.textContent = totalParticipants;
+      if (participantsCountEl) participantsCountEl.textContent = totalParticipants;
+      
+      console.log('Updated participant count:', totalParticipants);
     }
 
     // Remove participant from the list
     function removeParticipant(userId) {
       console.log('Removing participant:', userId);
-      const participant = document.getElementById(`participant-${userId}`);
-      if (participant) {
-        participant.remove();
-        console.log('Participant removed from list:', userId);
-
-        // Update the count
-        const participantsListEl = document.getElementById('participants-grid');
-        const participantsCountEl = document.getElementById('participants-count');
-        if (participantsListEl && participantsCountEl) {
-          const count = participantsListEl.querySelectorAll('.participant-card').length;
-          participantsCountEl.textContent = count;
-          console.log('Updated participant count after removal:', count);
-        }
+      
+      // Remove from participants modal
+      const participantCard = document.getElementById(`participant-card-${userId}`);
+      if (participantCard) {
+        participantCard.remove();
+        console.log('Participant removed from modal:', userId);
       } else {
         console.log('Participant not found for removal:', userId);
       }
+
+      // Update the count in both footer and modal
+      const totalParticipants = document.querySelectorAll('.participant-card').length;
+      const onlineCountEl = document.getElementById('online-count');
+      const participantsCountEl = document.getElementById('participants-count');
+      
+      if (onlineCountEl) onlineCountEl.textContent = totalParticipants;
+      if (participantsCountEl) participantsCountEl.textContent = totalParticipants;
+      
+      console.log('Updated participant count after removal:', totalParticipants);
     }
 
     // Add remote user avatar
@@ -4960,8 +5064,8 @@
           const formattedResult = result.split('\n').map(line => 
             line.trim() ? `   ${line}` : ''
           ).join('\n');
-          terminal.innerHTML += `\n<span style="color: #4ade80;">✅ Output:</span>\n<span style="color: #e5e7eb;">${formattedResult}</span>`;
-          terminal.innerHTML += `\n<span style="color: #4a9eff;">✨ Execution completed successfully!</span>`;
+          terminal.innerHTML += `\n<span style="color: #4ade80;"> Output:</span>\n<span style="color: #e5e7eb;">${formattedResult}</span>`;
+          terminal.innerHTML += `\n<span style="color: #4a9eff;"> Execution completed successfully!</span>`;
           
           // Show success notification
           showNotification(`${language} code executed successfully!`, 'success', 3000);
@@ -5025,7 +5129,7 @@
           const successLine = document.createElement('div');
           successLine.className = 'terminal-line';
           successLine.style.color = '#4a9eff';
-          successLine.textContent = '✨ Execution completed successfully!';
+          successLine.textContent = ' Execution completed successfully!';
           terminalOutput.appendChild(successLine);
         } else {
           const noOutputLine = document.createElement('div');
@@ -5297,6 +5401,75 @@
           removeNotification(notification);
         });
       }
+    }
+
+    // Show Pro upgrade modal for specific features
+    function showProUpgradeModal(feature, message) {
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="modal-content pro-upgrade-modal" style="max-width: 500px; text-align: center;">
+          <div class="modal-header">
+            <h3 style="color: #ff6b35; margin: 0;">🚀 Upgrade to Pro</h3>
+          </div>
+          <div class="modal-body" style="padding: 20px;">
+            <div style="margin-bottom: 20px;">
+              <i class="bi bi-mic" style="font-size: 3rem; color: #ff6b35; margin-bottom: 15px;"></i>
+            </div>
+            <p style="font-size: 1.1rem; margin-bottom: 15px; color: #333;">
+              ${message}
+            </p>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="color: #333; margin-bottom: 10px;">Pro Features Include:</h4>
+              <ul style="text-align: left; list-style: none; padding: 0;">
+                <li style="margin: 8px 0;"><i class="bi bi-check-circle-fill" style="color: #28a745;"></i> Voice Chat with team members</li>
+                <li style="margin: 8px 0;"><i class="bi bi-check-circle-fill" style="color: #28a745;"></i> AI Code Analysis & Debugging</li>
+                <li style="margin: 8px 0;"><i class="bi bi-check-circle-fill" style="color: #28a745;"></i> Unlimited room capacity (50 users)</li>
+                <li style="margin: 8px 0;"><i class="bi bi-check-circle-fill" style="color: #28a745;"></i> Priority customer support</li>
+                <li style="margin: 8px 0;"><i class="bi bi-check-circle-fill" style="color: #28a745;"></i> Advanced collaboration tools</li>
+              </ul>
+            </div>
+            <div style="margin: 20px 0;">
+              <span style="font-size: 1.5rem; font-weight: bold; color: #ff6b35;">Only ₹99/month</span>
+            </div>
+          </div>
+          <div class="modal-footer" style="text-align: center; padding: 20px;">
+            <button class="btn btn-primary" onclick="upgradeToProNow()" style="background: linear-gradient(135deg, #ff6b35, #f7931e); border: none; padding: 12px 30px; font-size: 1.1rem; margin-right: 10px;">
+              Upgrade Now 🚀
+            </button>
+            <button class="btn btn-secondary" onclick="closeProUpgradeModal()" style="padding: 12px 20px;">
+              Maybe Later
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      // Add event listener to close modal when clicking outside
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          closeProUpgradeModal();
+        }
+      });
+      
+      // Store reference for closing
+      window.currentProUpgradeModal = modal;
+    }
+
+    // Close pro upgrade modal
+    function closeProUpgradeModal() {
+      const modal = window.currentProUpgradeModal;
+      if (modal && modal.parentNode) {
+        modal.remove();
+        window.currentProUpgradeModal = null;
+      }
+    }
+
+    // Redirect to upgrade page
+    function upgradeToProNow() {
+      closeProUpgradeModal();
+      window.open('/payment', '_blank');
     }
 
     // Setup event handlers for UI elements
@@ -6391,55 +6564,6 @@
       }
     }
 
-    // Updated addParticipant function to work with both old list and new modal
-    function addParticipant(userId, username, picture, color) {
-      console.log('Adding participant:', userId, username);
-      
-      // Add to participants modal
-      const participantsGrid = document.getElementById('participants-grid');
-      if (participantsGrid && !document.getElementById(`participant-card-${userId}`)) {
-        const userColor = color || getRandomColor(userId);
-        
-        const participantCard = document.createElement('div');
-        participantCard.className = 'participant-card';
-        participantCard.id = `participant-card-${userId}`;
-        
-        participantCard.innerHTML = `
-          <img src="${picture || `https://ui-avatars.com/api/?name=${username}`}" alt="${username}" class="participant-card-avatar">
-          <div class="participant-info">
-            <div class="participant-card-name">${username}</div>
-            <div class="participant-status">
-              <div class="status-indicator"></div>
-              Online
-            </div>
-          </div>
-        `;
-        
-        participantsGrid.appendChild(participantCard);
-        console.log('Participant added to modal:', username);
-      }
-
-      // Update the count in footer
-      const totalParticipants = document.querySelectorAll('.participant-card').length;
-      document.getElementById('online-count').textContent = totalParticipants;
-    }
-
-    // Updated removeParticipant function
-    function removeParticipant(userId) {
-      console.log('Removing participant:', userId);
-      
-      // Remove from participants modal
-      const participantCard = document.getElementById(`participant-card-${userId}`);
-      if (participantCard) {
-        participantCard.remove();
-        console.log('Participant removed from modal:', userId);
-      }
-
-      // Update the count in footer
-      const totalParticipants = document.querySelectorAll('.participant-card').length;
-      document.getElementById('online-count').textContent = totalParticipants;
-    }
-
     // Enhanced addChatMessage function with notifications
     function addChatMessage(data, isOwnMessage) {
       const { username, message, timestamp, picture } = data;
@@ -6528,6 +6652,9 @@
         explainBtn.addEventListener('click', () => analyzeCurrentCode('explain'));
       }
 
+      // Initialize usage counter
+      updateAIUsageCounter();
+
       console.log('AI Chat initialized successfully');
     }
 
@@ -6564,10 +6691,34 @@
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          
+          if (response.status === 429) {
+            // Daily limit reached
+            const message = errorData.requiresPro 
+              ? '🔒 You\'ve reached your daily AI chat limit (5 messages/day). Upgrade to Pro for unlimited access!'
+              : 'You\'ve reached your daily AI chat limit. Please try again tomorrow.';
+            addAIMessage(message, 'assistant', true);
+            
+            if (errorData.requiresPro) {
+              showNotification('Daily AI limit reached! Upgrade to Pro for unlimited access', 'warning', 8000);
+              setTimeout(() => showProUpgradeModal('ai-chat-limit'), 2000);
+            } else {
+              showNotification('Daily AI limit reached. Try again tomorrow.', 'warning', 5000);
+            }
+            return;
+          } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
         }
 
         const data = await response.json();
+        
+        // Update usage counter if available
+        if (data.usage && data.usage.remaining !== undefined) {
+          aiUsageRemaining = data.usage.remaining;
+          updateAIUsageCounter();
+        }
         
         // Add AI response to chat
         addAIMessage(data.response, 'assistant');
@@ -6630,10 +6781,34 @@
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          
+          if (response.status === 429) {
+            // Daily limit reached
+            const message = errorData.requiresPro 
+              ? '🔒 You\'ve reached your daily AI usage limit (5 requests/day). Upgrade to Pro for unlimited access!'
+              : 'You\'ve reached your daily AI usage limit. Please try again tomorrow.';
+            addAIMessage(message, 'assistant', true);
+            
+            if (errorData.requiresPro) {
+              showNotification('Daily AI limit reached! Upgrade to Pro for unlimited access', 'warning', 8000);
+              setTimeout(() => showProUpgradeModal('ai-analyze-limit'), 2000);
+            } else {
+              showNotification('Daily AI limit reached. Try again tomorrow.', 'warning', 5000);
+            }
+            return;
+          } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
         }
 
         const data = await response.json();
+        
+        // Update usage counter if available
+        if (data.usage && data.usage.remaining !== undefined) {
+          aiUsageRemaining = data.usage.remaining;
+          updateAIUsageCounter();
+        }
         
         // Add analysis to chat
         const analysisTitle = {
