@@ -20,7 +20,6 @@ import { promisify } from "util"; // Add for promisifying exec
 import { GoogleGenerativeAI } from "@google/generative-ai"; // Add Gemini AI integration
 import Razorpay from "razorpay"; // Add Razorpay for payments
 import nodemailer from "nodemailer"; // Add email functionality for password reset
-import bcrypt from "bcrypt"; // Add bcrypt for password hashing
 
 // Validate required environment variables for Vercel
 const requiredEnvVars = ['MONGODB_URI'];
@@ -2077,16 +2076,17 @@ app.post("/auth/reset-password", async (req, res) => {
       });
     }
 
-    // Hash the new password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    console.log("User found, updating password for:", user.email);
+
+    // Save password as plain text (no hashing)
+    const newPassword = password;
 
     // Update user's password and remove reset token
     await collection.updateOne(
       { _id: user._id },
       {
         $set: {
-          password: hashedPassword
+          password: newPassword
         },
         $unset: {
           'passwordReset.token': '',
