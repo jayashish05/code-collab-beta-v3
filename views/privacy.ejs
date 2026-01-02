@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Privacy Policy | CodeCollab</title>
+  <%- include('head-scripts') %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: white;
+    }
+
+    .top-navbar {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: white !important;
+      text-decoration: none;
+    }
+
+    .policy-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+
+    .policy-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 2.5rem;
+    }
+
+    .policy-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .last-updated {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #3b82f6;
+      margin-bottom: 1rem;
+    }
+
+    .section p, .section li {
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.7;
+    }
+
+    .section ul {
+      padding-left: 1.5rem;
+    }
+
+    .section li {
+      margin-bottom: 0.5rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      margin-bottom: 1.5rem;
+      transition: color 0.3s;
+    }
+
+    .back-link:hover {
+      color: white;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+
+    .data-table th, .data-table td {
+      padding: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: left;
+    }
+
+    .data-table th {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+
+    .data-table td {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .highlight-box {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navbar -->
+  <nav class="navbar navbar-expand-lg top-navbar">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand" href="/">
+        <i class="bi bi-code-slash me-2"></i>
+        CodeCollab
+      </a>
+    </div>
+  </nav>
+
+  <div class="policy-container">
+    <a href="/" class="back-link">
+      <i class="bi bi-arrow-left"></i>
+      Back to Home
+    </a>
+
+    <div class="policy-card">
+      <h1 class="policy-title">Privacy Policy</h1>
+      <p class="last-updated">Last Updated: January 2, 2026</p>
+
+      <div class="section">
+        <h2>1. Introduction</h2>
+        <p>CodeCollab ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our collaborative coding platform.</p>
+      </div>
+
+      <div class="section">
+        <h2>2. Information We Collect</h2>
+        <p>We collect information in the following ways:</p>
+        
+        <h3 style="font-size: 1.1rem; margin-top: 1rem; color: white;">2.1 Information You Provide</h3>
+        <ul>
+          <li><strong>Account Information:</strong> Name, email address, password (hashed)</li>
+          <li><strong>Profile Information:</strong> Profile picture (if provided)</li>
+          <li><strong>Payment Information:</strong> Processed securely through Razorpay (we don't store card details)</li>
+          <li><strong>Code Content:</strong> Code you write and execute in rooms</li>
+        </ul>
+
+        <h3 style="font-size: 1.1rem; margin-top: 1rem; color: white;">2.2 Information Collected Automatically</h3>
+        <ul>
+          <li>IP address and browser type</li>
+          <li>Device information</li>
+          <li>Usage statistics (rooms joined, code executions)</li>
+          <li>Session information</li>
+        </ul>
+
+        <h3 style="font-size: 1.1rem; margin-top: 1rem; color: white;">2.3 Third-Party Authentication</h3>
+        <p>If you sign in using Google or GitHub, we receive:</p>
+        <ul>
+          <li>Your public profile information</li>
+          <li>Email address (if available)</li>
+          <li>Profile picture</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>3. How We Use Your Information</h2>
+        <table class="data-table">
+          <tr>
+            <th>Purpose</th>
+            <th>Data Used</th>
+          </tr>
+          <tr>
+            <td>Provide the Service</td>
+            <td>Account info, code content</td>
+          </tr>
+          <tr>
+            <td>Process Payments</td>
+            <td>Email, payment details (via Razorpay)</td>
+          </tr>
+          <tr>
+            <td>Improve Service</td>
+            <td>Usage statistics, feedback</td>
+          </tr>
+          <tr>
+            <td>Send Communications</td>
+            <td>Email address</td>
+          </tr>
+          <tr>
+            <td>Provide AI Features</td>
+            <td>Code content (processed, not stored by AI)</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>4. Data Sharing</h2>
+        <p>We do NOT sell your personal data. We may share information with:</p>
+        <ul>
+          <li><strong>Service Providers:</strong> Razorpay (payments), Google AI (code analysis)</li>
+          <li><strong>Legal Requirements:</strong> When required by law</li>
+          <li><strong>Other Users:</strong> Your username and profile picture in shared rooms</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>5. Data Security</h2>
+        <p>We implement industry-standard security measures:</p>
+        <ul>
+          <li>Passwords are hashed using bcrypt</li>
+          <li>HTTPS encryption for all data transmission</li>
+          <li>Secure session management</li>
+          <li>Regular security audits</li>
+        </ul>
+        <div class="highlight-box">
+          <i class="bi bi-shield-check me-2"></i>
+          <strong>Payment Security:</strong> All payment processing is handled by Razorpay's PCI-DSS compliant infrastructure. We never store your card details.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>6. Data Retention</h2>
+        <ul>
+          <li><strong>Account Data:</strong> Retained until you delete your account</li>
+          <li><strong>Room Code:</strong> Retained for 30 days after last activity</li>
+          <li><strong>Payment Records:</strong> Retained for 7 years (legal requirement)</li>
+          <li><strong>Activity Logs:</strong> Retained for 90 days</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>7. Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+          <li><strong>Access:</strong> Request a copy of your data</li>
+          <li><strong>Correction:</strong> Update inaccurate information</li>
+          <li><strong>Deletion:</strong> Delete your account and associated data</li>
+          <li><strong>Portability:</strong> Export your code and data</li>
+          <li><strong>Opt-out:</strong> Unsubscribe from marketing emails</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>8. Cookies</h2>
+        <p>We use cookies for:</p>
+        <ul>
+          <li>Session management (essential)</li>
+          <li>Remembering preferences</li>
+          <li>Analytics (anonymous usage data)</li>
+        </ul>
+        <p>You can control cookies through your browser settings.</p>
+      </div>
+
+      <div class="section">
+        <h2>9. Children's Privacy</h2>
+        <p>CodeCollab is not intended for users under 13 years of age. We do not knowingly collect information from children under 13.</p>
+      </div>
+
+      <div class="section">
+        <h2>10. International Data Transfers</h2>
+        <p>Your data may be processed in countries outside India. We ensure appropriate safeguards are in place for such transfers.</p>
+      </div>
+
+      <div class="section">
+        <h2>11. Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time. We will notify you of significant changes via email or through the Service.</p>
+      </div>
+
+      <div class="section">
+        <h2>12. Contact Us</h2>
+        <p>For privacy-related inquiries:</p>
+        <p><strong>Email:</strong> codecollabbeta@gmail.com</p>
+        <p><strong>Address:</strong> Hyderabad, Telangana, India - 500001</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

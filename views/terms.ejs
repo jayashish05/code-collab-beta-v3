@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Terms and Conditions | CodeCollab</title>
+  <%- include('head-scripts') %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: white;
+    }
+
+    .top-navbar {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: white !important;
+      text-decoration: none;
+    }
+
+    .policy-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+
+    .policy-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 2.5rem;
+    }
+
+    .policy-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .last-updated {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #3b82f6;
+      margin-bottom: 1rem;
+    }
+
+    .section p, .section li {
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.7;
+    }
+
+    .section ul {
+      padding-left: 1.5rem;
+    }
+
+    .section li {
+      margin-bottom: 0.5rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      margin-bottom: 1.5rem;
+      transition: color 0.3s;
+    }
+
+    .back-link:hover {
+      color: white;
+    }
+
+    .highlight-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navbar -->
+  <nav class="navbar navbar-expand-lg top-navbar">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand" href="/">
+        <i class="bi bi-code-slash me-2"></i>
+        CodeCollab
+      </a>
+    </div>
+  </nav>
+
+  <div class="policy-container">
+    <a href="/" class="back-link">
+      <i class="bi bi-arrow-left"></i>
+      Back to Home
+    </a>
+
+    <div class="policy-card">
+      <h1 class="policy-title">Terms and Conditions</h1>
+      <p class="last-updated">Last Updated: January 2, 2026</p>
+
+      <div class="section">
+        <h2>1. Acceptance of Terms</h2>
+        <p>By accessing or using CodeCollab ("the Service"), you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use the Service.</p>
+      </div>
+
+      <div class="section">
+        <h2>2. Description of Service</h2>
+        <p>CodeCollab is a real-time collaborative coding platform that allows users to:</p>
+        <ul>
+          <li>Create and join coding rooms for collaborative programming</li>
+          <li>Execute code in multiple programming languages</li>
+          <li>Use AI-powered code assistance features</li>
+          <li>Communicate with team members via voice chat (Pro feature)</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>3. User Accounts</h2>
+        <p>To use certain features of the Service, you must create an account. You agree to:</p>
+        <ul>
+          <li>Provide accurate and complete information during registration</li>
+          <li>Maintain the security of your account credentials</li>
+          <li>Notify us immediately of any unauthorized access</li>
+          <li>Be responsible for all activities under your account</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>4. Subscription Plans</h2>
+        <p>CodeCollab offers both free and paid subscription plans:</p>
+        <ul>
+          <li><strong>Free Plan:</strong> Basic collaboration features with limited room capacity and AI requests</li>
+          <li><strong>Pro Plan (₹99/month):</strong> Advanced features including unlimited room capacity, voice chat, and enhanced AI capabilities</li>
+        </ul>
+        <div class="highlight-box">
+          <p><strong>Note:</strong> Pro subscriptions are billed monthly and automatically renew unless cancelled.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>5. Acceptable Use Policy</h2>
+        <p>You agree NOT to use the Service to:</p>
+        <ul>
+          <li>Execute malicious code or attempt to compromise our systems</li>
+          <li>Share or distribute illegal content</li>
+          <li>Harass, abuse, or harm other users</li>
+          <li>Violate any applicable laws or regulations</li>
+          <li>Attempt to gain unauthorized access to other accounts</li>
+          <li>Use the Service for cryptocurrency mining or similar activities</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>6. Intellectual Property</h2>
+        <p>You retain ownership of any code you create using the Service. However, you grant CodeCollab a limited license to process and store your code as necessary to provide the Service.</p>
+        <p>The CodeCollab name, logo, and all related trademarks are the property of CodeCollab.</p>
+      </div>
+
+      <div class="section">
+        <h2>7. Code Execution</h2>
+        <p>Code execution is provided "as-is" with reasonable security measures. You acknowledge that:</p>
+        <ul>
+          <li>Code execution has time and resource limits</li>
+          <li>We are not responsible for any data loss during execution</li>
+          <li>Certain operations may be restricted for security reasons</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>8. Limitation of Liability</h2>
+        <p>CodeCollab is provided "as-is" without warranties of any kind. We shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the Service.</p>
+      </div>
+
+      <div class="section">
+        <h2>9. Termination</h2>
+        <p>We reserve the right to suspend or terminate your account if you violate these Terms. You may also delete your account at any time through your profile settings.</p>
+      </div>
+
+      <div class="section">
+        <h2>10. Changes to Terms</h2>
+        <p>We may update these Terms from time to time. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
+      </div>
+
+      <div class="section">
+        <h2>11. Governing Law</h2>
+        <p>These Terms shall be governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts in Hyderabad, Telangana.</p>
+      </div>
+
+      <div class="section">
+        <h2>12. Contact Information</h2>
+        <p>For questions about these Terms, please contact us at:</p>
+        <p><strong>Email:</strong> codecollabbeta@gmail.com</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Cancellation and Refund Policy | CodeCollab</title>
+  <%- include('head-scripts') %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: white;
+    }
+
+    .top-navbar {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: white !important;
+      text-decoration: none;
+    }
+
+    .policy-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+
+    .policy-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 2.5rem;
+    }
+
+    .policy-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .last-updated {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #3b82f6;
+      margin-bottom: 1rem;
+    }
+
+    .section p, .section li {
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.7;
+    }
+
+    .section ul {
+      padding-left: 1.5rem;
+    }
+
+    .section li {
+      margin-bottom: 0.5rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      margin-bottom: 1.5rem;
+      transition: color 0.3s;
+    }
+
+    .back-link:hover {
+      color: white;
+    }
+
+    .highlight-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+
+    .warning-box {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+
+    .success-box {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+
+    .refund-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .timeline-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+
+    .timeline-icon.step1 { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    .timeline-icon.step2 { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+    .timeline-icon.step3 { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+
+    .timeline-content h4 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1rem;
+    }
+
+    .timeline-content p {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navbar -->
+  <nav class="navbar navbar-expand-lg top-navbar">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand" href="/">
+        <i class="bi bi-code-slash me-2"></i>
+        CodeCollab
+      </a>
+    </div>
+  </nav>
+
+  <div class="policy-container">
+    <a href="/" class="back-link">
+      <i class="bi bi-arrow-left"></i>
+      Back to Home
+    </a>
+
+    <div class="policy-card">
+      <h1 class="policy-title">Cancellation and Refund Policy</h1>
+      <p class="last-updated">Last Updated: January 2, 2026</p>
+
+      <div class="section">
+        <h2>1. Overview</h2>
+        <p>This policy outlines the terms for cancellation and refunds for CodeCollab Pro subscriptions. We want you to be completely satisfied with your purchase.</p>
+        <div class="highlight-box">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>Digital Service:</strong> CodeCollab is a digital software service. No physical products are shipped.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>2. Subscription Cancellation</h2>
+        <p>You can cancel your CodeCollab Pro subscription at any time:</p>
+        <ul>
+          <li>Go to your <strong>Profile Settings</strong></li>
+          <li>Click on <strong>Subscription</strong></li>
+          <li>Select <strong>Cancel Subscription</strong></li>
+        </ul>
+        <div class="warning-box">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <strong>Important:</strong> After cancellation, you will continue to have Pro access until the end of your current billing period.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>3. Refund Eligibility</h2>
+        <p>We offer refunds under the following conditions:</p>
+        
+        <div class="success-box">
+          <h4 style="color: #10b981; margin: 0 0 0.5rem 0;"><i class="bi bi-check-circle me-2"></i>Eligible for Full Refund</h4>
+          <ul style="margin: 0;">
+            <li>Request made within <strong>7 days</strong> of purchase</li>
+            <li>Technical issues preventing service access</li>
+            <li>Duplicate/accidental charges</li>
+            <li>Service not as described</li>
+          </ul>
+        </div>
+
+        <div class="warning-box">
+          <h4 style="color: #f59e0b; margin: 0 0 0.5rem 0;"><i class="bi bi-x-circle me-2"></i>Not Eligible for Refund</h4>
+          <ul style="margin: 0;">
+            <li>Request made after 7 days of purchase</li>
+            <li>Change of mind after using Pro features</li>
+            <li>Account suspended due to Terms violation</li>
+            <li>Failure to cancel before renewal</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>4. How to Request a Refund</h2>
+        <div class="refund-timeline">
+          <div class="timeline-item">
+            <div class="timeline-icon step1">1</div>
+            <div class="timeline-content">
+              <h4>Contact Support</h4>
+              <p>Email us at <strong>codecollabbeta@gmail.com</strong> with subject "Refund Request"</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-icon step2">2</div>
+            <div class="timeline-content">
+              <h4>Provide Details</h4>
+              <p>Include your registered email, payment ID, and reason for refund</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-icon step3">3</div>
+            <div class="timeline-content">
+              <h4>Receive Refund</h4>
+              <p>Approved refunds are processed within 5-7 business days</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>5. Refund Processing</h2>
+        <ul>
+          <li><strong>Processing Time:</strong> 5-7 business days after approval</li>
+          <li><strong>Refund Method:</strong> Original payment method (via Razorpay)</li>
+          <li><strong>Bank Processing:</strong> Additional 3-5 days depending on your bank</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>6. Pro-rated Refunds</h2>
+        <p>We do not offer pro-rated refunds for partial months. If you cancel mid-cycle:</p>
+        <ul>
+          <li>Your Pro access continues until the end of the billing period</li>
+          <li>No refund for unused days</li>
+          <li>You won't be charged for the next billing cycle</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>7. Technical Issues</h2>
+        <p>If you're experiencing technical issues:</p>
+        <ul>
+          <li>Contact us first at <strong>codecollabbeta@gmail.com</strong></li>
+          <li>We'll attempt to resolve the issue within 48 hours</li>
+          <li>If unresolved, you're eligible for a full refund</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>8. Chargebacks</h2>
+        <p>We encourage you to contact us before initiating a chargeback with your bank. Chargebacks may result in:</p>
+        <ul>
+          <li>Immediate suspension of your account</li>
+          <li>Loss of any remaining Pro benefits</li>
+          <li>Additional investigation time</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>9. Contact Us</h2>
+        <p>For refund requests or questions about this policy:</p>
+        <p><strong>Email:</strong> codecollabbeta@gmail.com</p>
+        <p><strong>Response Time:</strong> Within 24-48 hours</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

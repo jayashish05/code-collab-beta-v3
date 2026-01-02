@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Shipping & Delivery Policy | CodeCollab</title>
+  <%- include('head-scripts') %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: white;
+    }
+
+    .top-navbar {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: white !important;
+      text-decoration: none;
+    }
+
+    .policy-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+
+    .policy-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 2.5rem;
+    }
+
+    .policy-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .last-updated {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #3b82f6;
+      margin-bottom: 1rem;
+    }
+
+    .section p, .section li {
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.7;
+    }
+
+    .section ul {
+      padding-left: 1.5rem;
+    }
+
+    .section li {
+      margin-bottom: 0.5rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      margin-bottom: 1.5rem;
+      transition: color 0.3s;
+    }
+
+    .back-link:hover {
+      color: white;
+    }
+
+    .highlight-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      text-align: center;
+    }
+
+    .highlight-box i {
+      font-size: 3rem;
+      color: #3b82f6;
+      margin-bottom: 1rem;
+    }
+
+    .delivery-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .delivery-feature {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .delivery-feature i {
+      font-size: 2rem;
+      color: #10b981;
+      margin-bottom: 0.75rem;
+    }
+
+    .delivery-feature h4 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1rem;
+    }
+
+    .delivery-feature p {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navbar -->
+  <nav class="navbar navbar-expand-lg top-navbar">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand" href="/">
+        <i class="bi bi-code-slash me-2"></i>
+        CodeCollab
+      </a>
+    </div>
+  </nav>
+
+  <div class="policy-container">
+    <a href="/" class="back-link">
+      <i class="bi bi-arrow-left"></i>
+      Back to Home
+    </a>
+
+    <div class="policy-card">
+      <h1 class="policy-title">Shipping & Delivery Policy</h1>
+      <p class="last-updated">Last Updated: January 2, 2026</p>
+
+      <div class="highlight-box">
+        <i class="bi bi-cloud-check"></i>
+        <h3 style="color: white; margin-bottom: 0.5rem;">100% Digital Service</h3>
+        <p style="margin: 0;">CodeCollab is a cloud-based software service. No physical products are shipped or delivered.</p>
+      </div>
+
+      <div class="section">
+        <h2>1. Digital Service Delivery</h2>
+        <p>CodeCollab Pro subscription is delivered instantly upon successful payment. Here's what you receive:</p>
+        <ul>
+          <li><strong>Immediate Access:</strong> Pro features are activated within seconds of payment confirmation</li>
+          <li><strong>Email Confirmation:</strong> You'll receive a confirmation email with your subscription details</li>
+          <li><strong>Dashboard Update:</strong> Your dashboard will reflect Pro status immediately</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>2. Delivery Timeline</h2>
+        <div class="delivery-features">
+          <div class="delivery-feature">
+            <i class="bi bi-lightning-charge"></i>
+            <h4>Instant Activation</h4>
+            <p>Pro features available immediately</p>
+          </div>
+          <div class="delivery-feature">
+            <i class="bi bi-envelope-check"></i>
+            <h4>Email Receipt</h4>
+            <p>Within 5 minutes</p>
+          </div>
+          <div class="delivery-feature">
+            <i class="bi bi-globe"></i>
+            <h4>Global Access</h4>
+            <p>Available worldwide 24/7</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>3. Access Requirements</h2>
+        <p>To access CodeCollab Pro features, you need:</p>
+        <ul>
+          <li>A stable internet connection</li>
+          <li>A modern web browser (Chrome, Firefox, Safari, or Edge)</li>
+          <li>Your registered account credentials</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>4. Service Availability</h2>
+        <p>CodeCollab is available:</p>
+        <ul>
+          <li><strong>24/7 Access:</strong> Our service is available round the clock</li>
+          <li><strong>Global Coverage:</strong> Accessible from anywhere in the world</li>
+          <li><strong>99.9% Uptime:</strong> We strive for maximum availability</li>
+        </ul>
+        <p>Occasional maintenance windows may occur, and users will be notified in advance when possible.</p>
+      </div>
+
+      <div class="section">
+        <h2>5. No Physical Shipping</h2>
+        <p>Since CodeCollab is entirely digital:</p>
+        <ul>
+          <li>No shipping address is required</li>
+          <li>No shipping charges apply</li>
+          <li>No delivery delays or tracking needed</li>
+          <li>No physical items to return</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>6. Delivery Issues</h2>
+        <p>If you don't see Pro features after payment:</p>
+        <ul>
+          <li>Wait 5 minutes and refresh your browser</li>
+          <li>Log out and log back in</li>
+          <li>Check your email for payment confirmation</li>
+          <li>Contact support at <strong>codecollabbeta@gmail.com</strong></li>
+        </ul>
+        <p>We typically resolve delivery issues within 1-2 hours during business hours.</p>
+      </div>
+
+      <div class="section">
+        <h2>7. Contact Us</h2>
+        <p>For any delivery-related queries:</p>
+        <p><strong>Email:</strong> codecollabbeta@gmail.com</p>
+        <p><strong>Response Time:</strong> Within 24 hours</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

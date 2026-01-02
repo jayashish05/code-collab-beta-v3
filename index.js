@@ -2567,6 +2567,27 @@ app.get("/auth/signout", (req, res, next) => {
   }
 });
 
+// Policy Pages Routes (Required for Razorpay compliance)
+app.get("/contact", (req, res) => {
+  res.render("contact.ejs", { title: "Contact Us | CodeCollab" });
+});
+
+app.get("/terms", (req, res) => {
+  res.render("terms.ejs", { title: "Terms and Conditions | CodeCollab" });
+});
+
+app.get("/privacy", (req, res) => {
+  res.render("privacy.ejs", { title: "Privacy Policy | CodeCollab" });
+});
+
+app.get("/refund", (req, res) => {
+  res.render("refund.ejs", { title: "Cancellation and Refund Policy | CodeCollab" });
+});
+
+app.get("/shipping", (req, res) => {
+  res.render("shipping.ejs", { title: "Shipping & Delivery Policy | CodeCollab" });
+});
+
 // Payment Routes
 app.get("/payment", (req, res) => {
   // Check if user is authenticated
@@ -2754,6 +2775,82 @@ app.post("/api/payment/verify", async (req, res) => {
       success: false, 
       message: "Payment verification failed: " + error.message 
     });
+  }
+});
+
+// Razorpay Webhook Handler - for reliable payment status updates
+app.post("/api/payment/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    
+    // If webhook secret is not configured, skip signature verification (not recommended for production)
+    if (webhookSecret) {
+      const shasum = crypto.createHmac('sha256', webhookSecret);
+      shasum.update(JSON.stringify(req.body));
+      const digest = shasum.digest('hex');
+      
+      if (digest !== req.headers['x-razorpay-signature']) {
+        console.error('Webhook signature verification failed');
+        return res.status(400).json({ success: false, message: 'Invalid signature' });
+      }
+    }
+
+    const event = req.body;
+    console.log('Razorpay webhook event:', event.event);
+
+    switch (event.event) {
+      case 'payment.captured':
+        const payment = event.payload.payment.entity;
+        console.log(`Payment captured: ${payment.id}, Amount: ${payment.amount}`);
+        
+        // Extract user email from payment notes
+        const userEmail = payment.notes?.user_email;
+        if (userEmail) {
+          const subscriptionEnd = new Date();
+          subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+          
+          await safeDBOperation(async () => {
+            return await collection.updateOne(
+              { email: userEmail },
+              {
+                $set: {
+                  'subscription.isPro': true,
+                  'subscription.planType': 'pro',
+                  'subscription.subscriptionStart': new Date(),
+                  'subscription.subscriptionEnd': subscriptionEnd,
+                  'subscription.paymentId': payment.id,
+                  'subscription.features.aiChatEnabled': true,
+                  'subscription.features.aiCodeAnalysisEnabled': true,
+                  'subscription.features.unlimitedRooms': true,
+                  'subscription.features.prioritySupport': true,
+                  'subscription.limits.maxRoomCapacity': 50,
+                  'subscription.limits.aiRequestsPerDay': 1000
+                }
+              }
+            );
+          });
+          console.log(`Subscription activated via webhook for ${userEmail}`);
+        }
+        break;
+
+      case 'payment.failed':
+        const failedPayment = event.payload.payment.entity;
+        console.log(`Payment failed: ${failedPayment.id}, Reason: ${failedPayment.error_description}`);
+        break;
+
+      case 'order.paid':
+        const order = event.payload.order.entity;
+        console.log(`Order paid: ${order.id}`);
+        break;
+
+      default:
+        console.log(`Unhandled webhook event: ${event.event}`);
+    }
+
+    res.json({ success: true, received: true });
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    res.status(500).json({ success: false, message: 'Webhook processing failed' });
   }
 });
 
