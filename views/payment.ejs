@@ -484,7 +484,7 @@
             <!-- Price Section -->
             <div class="price-section">
               <div class="price">₹99</div>
-              <div class="price-period">per month</div>
+              <div class="price-period">for 3 months</div>
             </div>
 
             <!-- Features Grid -->
@@ -533,7 +533,7 @@
             <!-- Payment Button -->
             <button id="paymentButton" class="payment-button">
               <span class="loading-spinner"></span>
-              <span class="button-text">Upgrade to Pro - ₹99/month</span>
+              <span class="button-text">Upgrade to Pro - ₹99 for 3 months</span>
             </button>
 
             <!-- Security Info -->
@@ -650,7 +650,7 @@
               contact: '<%= user.phone || "" %>'
             },
             notes: {
-              subscription: 'CodeCollab Pro Monthly'
+              subscription: 'CodeCollab Pro Quarterly (3 months)'
             },
             theme: {
               color: '#3b82f6'
@@ -678,7 +678,7 @@
       function resetButtonState() {
         button.disabled = false;
         spinner.style.display = 'none';
-        buttonText.textContent = 'Upgrade to Pro - ₹99/month';
+        buttonText.textContent = 'Upgrade to Pro - ₹99 for 3 months';
       }
 
       function verifyPayment(paymentResponse) {

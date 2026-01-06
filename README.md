@@ -25,7 +25,7 @@ Screenshots:
 - **Responsive Design**: Works on desktop and mobile devices
 - **Room Capacity**: Up to 4 members per room
 
-### Pro Features (₹99/month)
+### Pro Features (₹99 for 3 months)
 - **🤖 AI Code Assistant**: Advanced AI-powered code analysis, debugging, and optimization
 - **🎤 Voice Chat**: Real-time voice communication with team members
 - **👥 Unlimited Room Capacity**: Host rooms with unlimited members

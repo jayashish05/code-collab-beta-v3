@@ -1,10 +1,14 @@
 import express from "express";
+import dotenv from "dotenv";
+
+// Load environment variables FIRST before anything else
+dotenv.config();
+
 import { collection, Room, VoiceChat, safeDBOperation, ensureDBConnection, connectDB, trackUserActivity, startCodingSession, updateCodingSession, endCodingSession, trackCodeExecution, saveRoomCode, loadRoomCode, saveRoomFile, autoSaveRoomData } from "./config.js";
 import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import * as fs from "fs";
-import dotenv from "dotenv";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth2";
@@ -49,8 +53,6 @@ console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID ? 'Set' : 'Not set')
 console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'Set' : 'Not set');
 console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
 console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
-
-dotenv.config();
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
@@ -2645,7 +2647,7 @@ app.post("/api/payment/create-order", async (req, res) => {
       receipt: `codecollab_pro_${req.user.email}_${Date.now()}`,
       notes: {
         user_email: req.user.email,
-        subscription_type: 'pro_monthly',
+        subscription_type: 'pro_quarterly',
         user_id: req.user._id?.toString() || req.user.googleId
       }
     };
@@ -2711,7 +2713,7 @@ app.post("/api/payment/verify", async (req, res) => {
 
     // Update user subscription in database
     const subscriptionEnd = new Date();
-    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1); // Add 1 month
+    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 3); // Add 3 months
 
     const updateResult = await safeDBOperation(async () => {
       return await collection.updateOne(
@@ -2807,7 +2809,7 @@ app.post("/api/payment/webhook", express.raw({ type: 'application/json' }), asyn
         const userEmail = payment.notes?.user_email;
         if (userEmail) {
           const subscriptionEnd = new Date();
-          subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+          subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 3); // Add 3 months
           
           await safeDBOperation(async () => {
             return await collection.updateOne(
@@ -2926,7 +2928,7 @@ app.get("/api/pro-features", (req, res) => {
         features: Object.keys(freeFeatures)
       },
       pro: {
-        price: "₹99/month", 
+        price: "₹99/3 months", 
         features: Object.keys(proFeatures),
         additionalBenefits: ["Higher AI usage limits (1000/day)", "Unlimited room capacity", "Priority support"]
       }
@@ -3348,7 +3350,7 @@ function requireProFeature(featureName) {
 async function upgradeUserToPro(userId, paymentDetails = {}) {
   try {
     const subscriptionEnd = new Date();
-    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1); // Add 1 month
+    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 3); // Add 3 months
 
     const updateResult = await safeDBOperation(async () => {
       return await collection.updateOne(

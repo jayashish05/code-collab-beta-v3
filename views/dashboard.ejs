@@ -1653,7 +1653,7 @@
           </div>
           <h3 class="text-white mb-3">Welcome to CodeCollab Pro!</h3>
           <div class="subscription-info">
-            <div><strong>Plan:</strong> Pro Monthly</div>
+            <div><strong>Plan:</strong> Pro Quarterly (3 months)</div>
             <div><strong>Status:</strong> Active</div>
             ${subscription.daysRemaining ? `<div><strong>Days Remaining:</strong> ${subscription.daysRemaining}</div>` : ''}
             ${subscription.subscriptionEnd ? `<div><strong>Renewal Date:</strong> ${new Date(subscription.subscriptionEnd).toLocaleDateString()}</div>` : ''}
@@ -1746,7 +1746,7 @@
           <div class="mt-3">
             <a href="/payment" class="upgrade-button">
               <i class="bi bi-star"></i>
-              Upgrade to Pro - ₹99/month
+              Upgrade to Pro - ₹99 for 3 months
             </a>
           </div>
         `;
@@ -1772,7 +1772,7 @@
 
     // Function to show pro feature info (for free users)
     function showProFeatures() {
-      alert('Pro Features:\\n\\n• AI Code Analysis & Debugging\\n• Voice Chat with team members\\n• Unlimited room capacity\\n• Priority customer support\\n• Advanced code optimization\\n\\nUpgrade to Pro for only ₹99/month!');
+      alert('Pro Features:\\n\\n• AI Code Analysis & Debugging\\n• Voice Chat with team members\\n• Unlimited room capacity\\n• Priority customer support\\n• Advanced code optimization\\n\\nUpgrade to Pro for only ₹99 for 3 months!');
     }
 
     // Function to show pro feature modals (for pro users)
