@@ -2644,7 +2644,7 @@ app.post("/api/payment/create-order", async (req, res) => {
     const orderOptions = {
       amount: amount, // Amount in paise
       currency: currency || 'INR',
-      receipt: `codecollab_pro_${req.user.email}_${Date.now()}`,
+      receipt: `cc_${Date.now()}`,
       notes: {
         user_email: req.user.email,
         subscription_type: 'pro_quarterly',
@@ -2667,9 +2667,10 @@ app.post("/api/payment/create-order", async (req, res) => {
 
   } catch (error) {
     console.error("Payment order creation error:", error);
+    const errorMessage = error?.error?.description || error?.message || JSON.stringify(error) || "Unknown error";
     res.status(500).json({ 
       success: false, 
-      message: "Failed to create payment order: " + error.message 
+      message: "Failed to create payment order: " + errorMessage
     });
   }
 });
